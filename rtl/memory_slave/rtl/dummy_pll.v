@@ -1,0 +1,114 @@
+
+// ************************************************************************************************
+//
+// PROJECT      :   AXI_ADDRESS_READ
+// PRODUCT      :   AXI meomory slave
+// FILE         :   <File Name/Module Name>
+// AUTHOR       :   <Author's name>
+// DESCRIPTION  :   Accepts the address from master nand holds it. If data read is not busy pass module
+//
+// ************************************************************************************************
+//
+// REVISIONS:
+//
+//	Date			Developer	Description
+//	----			---------	-----------
+//  09 Apr 2014		Start date
+//
+//**************************************************************************************************
+
+`timescale 1ps/1ps
+
+module dummy_pll
+    (
+		clk,
+		reset,
+		init_calib_complete
+
+    );
+
+//---------------------------------------------------------------------------------------------------------------------
+// Global constant headers
+//---------------------------------------------------------------------------------------------------------------------
+   `include "../sim/param.v"
+
+//---------------------------------------------------------------------------------------------------------------------
+// parameter definitions
+//---------------------------------------------------------------------------------------------------------------------
+
+	parameter CLKFBOUT_MULT   = 4		;       // write PLL VCO multiplier
+	parameter DIVCLK_DIVIDE   = 1		;        // write PLL VCO divisor
+	parameter CLKOUT0_PHASE   = 45.0	;     // VCO output divisor for clkout0
+	parameter CLKOUT0_DIVIDE   = 16		;      // VCO output divisor for PLL clkout0
+	parameter CLKOUT1_DIVIDE   = 4		;       // VCO output divisor for PLL clkout1
+	parameter CLKOUT2_DIVIDE   = 64		;      // VCO output divisor for PLL clkout2
+    parameter CLKOUT3_DIVIDE   = 16		;      // VCO output divisor for PLL clkout3
+	parameter CLKIN_PERIOD    = 3000    ;
+   parameter RESET_PERIOD = 2000000;
+   
+	localparam real CLKIN1_PERIOD_NS = CLKIN_PERIOD / 1000.0;
+	localparam integer VCO_PERIOD   = (CLKIN1_PERIOD_NS * DIVCLK_DIVIDE * 1000) / CLKFBOUT_MULT;
+	
+	localparam MMCM_VCO_MIN_FREQ = 600;
+	localparam  real    MMCM_VCO_MAX_PERIOD   = 1000000.0/MMCM_VCO_MIN_FREQ;
+	localparam CLKOUT3_PERIOD = VCO_PERIOD * CLKOUT3_DIVIDE;
+	localparam  real    MMCM_MULT_F_MID       = CLKOUT3_PERIOD/(MMCM_VCO_MAX_PERIOD*0.75);	
+	localparam  real    MMCM_EXPECTED_PERIOD  = CLKOUT3_PERIOD / MMCM_MULT_F_MID;
+	localparam  real    MMCM_MULT_F           = ((MMCM_EXPECTED_PERIOD > MMCM_VCO_MAX_PERIOD) ? MMCM_MULT_F_MID + 1.0 : MMCM_MULT_F_MID);
+
+	localparam  real	CLKFBOUT_MULT_F = MMCM_MULT_F;
+	real CLKFBOUT_MULT_F_RND;
+	real PERIOD_VCO_RL ;
+	localparam  real CLKIN1_PERIOD = CLKOUT3_PERIOD;
+	
+	wire [31:0] clkfb_frac_ht;
+	wire [31:0] clkfb_frac_lt;
+	integer clkfbm1_fht, clkfbm1_flt, clkfbm1pm_sel_int,clkfbm1r_sel;
+	
+//---------------------------------------------------------------------------------------------------------------------
+// I/O signals
+//---------------------------------------------------------------------------------------------------------------------
+
+	output reg reset;
+	output reg clk;
+	output reg init_calib_complete;
+//---------------------------------------------------------------------------------------------------------------------
+// Internal wires and registers
+//---------------------------------------------------------------------------------------------------------------------
+
+
+//---------------------------------------------------------------------------------------------------------------------
+// Implementation
+//---------------------------------------------------------------------------------------------------------------------
+initial begin
+	CLKFBOUT_MULT_F_RND = $itor($rtoi((CLKFBOUT_MULT_F + 0.0625) * 8.0)) / 8.0;
+	PERIOD_VCO_RL = CLKIN1_PERIOD / CLKFBOUT_MULT_F_RND;
+	
+	//---------------------------this should not be hardcoded---------------------
+	clkfbm1_fht = 2;
+	clkfbm1_flt = 2;
+	clkfbm1pm_sel_int = 6;
+	clkfbm1r_sel = 5;
+end
+
+//	assign clkfb_frac_ht = PERIOD_VCO_RL * clkfbm1_fht + (PERIOD_VCO_RL * clkfbm1pm_sel_int) / 8;
+//    assign clkfb_frac_lt = PERIOD_VCO_RL * clkfbm1_flt + (PERIOD_VCO_RL * clkfbm1r_sel) / 8;
+
+    assign clkfb_frac_ht = 3333;
+    assign clkfb_frac_lt = 3333;
+
+	initial begin
+		reset = 1;
+		init_calib_complete = 0;
+		#(2*RESET_PERIOD);
+		reset = 0;
+		#(2*RESET_PERIOD);
+		init_calib_complete = 1;
+	end
+	
+	
+	always begin
+               #(clkfb_frac_ht) clk = 0;
+               #(clkfb_frac_lt) clk = 1;
+	end
+endmodule
