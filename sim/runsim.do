@@ -2,9 +2,16 @@
 #vlib work
 #vmap work work
 
-vlog -work work ../rtl/verif/fifo_write_driver.v
-vlog -work work ../rtl/verif/inf_monitor.v
+vlog -work work ../verif/fifo_write_driver.v
+vlog -work work ../verif/inf_monitor.v
 vlog -work work ../rtl/geet_fifo_almost_full.v
+
+vlog  -sv ../verif/memory_slave/rtl/mem_slave_top_module.v
+vlog  -sv ../verif/memory_slave/rtl/add_read.v
+vlog  -sv ../verif/memory_slave/rtl/add_write.v
+vlog  -sv ../verif/memory_slave/rtl/data_read_write.v
+vlog  -sv ../verif/memory_slave/rtl/data_resp.v
+vlog  -sv "../verif/memory_slave/rtl/memory_module_virtual_memory.sv"
 
 vlog -work work ../rtl/cache_conf_stage.v
 vlog -work work ../rtl/num_val_clines_generator.v
@@ -25,4 +32,4 @@ vlog -work work ../rtl/inter_cache_pipe_hit_pipe.v
 vlog -work work -mixedsvvh +define+INSERT_MONITORS ../tb/cache_tb.sv
 
 
-vsim -voptargs="+acc" -t 1ps -lib work cache_tb
+vsim -voptargs="+acc" -t 1ps -lib work -sv_lib ../verif/memory_slave/rtl/ref_buf_mem_slave cache_tb

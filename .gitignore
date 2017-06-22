@@ -4,3 +4,5 @@ sim/work/
 cproj/ref_buf_mem_slave/ref_buf_mem_slave/Debug/
 cproj/ref_buf_mem_slave/Debug/
 simvectors/
+cproj/ref_buf_mem_slave/x64/
+cproj/ref_buf_mem_slave/ref_buf_mem_slave/x64/

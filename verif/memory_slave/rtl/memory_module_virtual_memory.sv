@@ -47,7 +47,7 @@ module memory_module_virtual_memory();
     import "DPI-C"  function void memory_init();
     import "DPI-C"  function byte memory_read(int location);
     import "DPI-C"  function void memory_write(int location, byte data);
-    import "DPI-C"  function int  add_ref_DPB(FILE* DBP_frame, int base_addr, int poc, int height, int width, int bit_depth, int SubWidthC, int SubHeightC);
+    import "DPI-C"  function int  add_ref_DPB(int base_addr, int poc, int height, int width, int bit_depth, int SubWidthC, int SubHeightC);
 
 //---------------------------------------------------------------------------------------------------------------------
 // Implementation
@@ -76,17 +76,17 @@ module memory_module_virtual_memory();
     endtask
     
     task init_ref_buffer;
-        input [32-1 : 0]  DBP_frame;
         input [32-1 : 0]  base_addr;
         input [32-1 : 0]  poc;
         input [32-1 : 0]  height;
         input [32-1 : 0]  width;
         input [32-1 : 0]  bit_depth;
-        input [32-1 : 0]  bit_depth;
         input [32-1 : 0]  SubWidthC;
         input [32-1 : 0]  SubHeightC;
+        
+        logic return_val;
         begin
-            add_ref_DPB(DBP_frame, base_addr, poc, height, width, bit_depth, SubWidthC, SubHeightC)
+            return_val = add_ref_DPB(base_addr, poc, height, width, bit_depth, SubWidthC, SubHeightC);
         end
     endtask
 

@@ -19,7 +19,7 @@ typedef unsigned char byte;
 
 #include "memory_include.h"
 
-#define FILE_PATH "E:\\HEVC\\encoder\\ref_cache\\sim\\"
+#define FILE_PATH "E:\\HEVC\\encoder\\ref_cache\\simvectors\\"
 
 
 // Cache block order
@@ -47,8 +47,9 @@ typedef unsigned char byte;
 // CR   CTU X_WID-1,Y_HIG-1 X0,Y_CTU-1,.... X_CTU-1,Y_CTU-1 ...
 
 
-static memory_array* memBlock = (memory_array*)malloc(sizeof (memory_array));
-// static memory_array* memBlock ;
+// static memory_array* memBlock = (memory_array*)malloc(sizeof (memory_array));
+FILE* DBP_frame = fopen(FILE_PATH "reconstructed_full.yuv", "rb");
+static memory_array* memBlock ;
 void memory_init(){
 
 	 memBlock = new memory_array;
@@ -62,7 +63,7 @@ void memory_write(int location, byte data){
 	memBlock->byte_elem[location] = data;
 }
 
-int add_ref_DPB(FILE* DBP_frame, int base_addr, int poc, int height, int width, int bit_depth, int SubWidthC, int SubHeightC){
+int add_ref_DPB(int base_addr, int poc, int height, int width, int bit_depth, int SubWidthC, int SubHeightC){
 	unsigned char pixel[2];
 	int seek_num;
 	int i, j, count = 0;
@@ -187,6 +188,7 @@ int add_ref_DPB(FILE* DBP_frame, int base_addr, int poc, int height, int width, 
 		}
 	}
 	fclose(DBP_frame);
+    return 0;
 }
 /* int main()
 {

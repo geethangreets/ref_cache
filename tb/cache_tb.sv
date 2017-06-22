@@ -100,8 +100,8 @@ module cache_tb();
 
 inter_cache_pipe_hit_pipe cache_top
 (
-    .clk                               ()  ,
-    .reset                             ()  ,
+    .clk                               (clk)  ,
+    .reset                             (reset)  ,
 
 	.ref_idx_in_in                     ()  ,      // default to zero (for current frame)
     .valid_in                          ()  ,           // input valid
@@ -166,6 +166,61 @@ inter_cache_pipe_hit_pipe cache_top
 
 );
 
+
+// synthesis translate_off
+    mem_slave_top_module
+    #(
+      .DUMMY_MEM(0),
+      .READ_DATA_DEBUG(0),
+      .WRITE_DATA_DEBUG(0)
+    )
+    ddr_soft_mem_block
+    (   .clk    (clk),
+        .reset  (reset),
+
+        .arid   (4'd0),
+        .araddr (),
+        .arlen  (),
+        .arsize  (),
+        .arburst(2'b01),
+        .arlock (),
+        .arcache(),
+        .arprot (),
+        .arvalid(),
+        .arready(),
+
+        .rid    (),
+        .rdata  (),
+        .rresp  (),
+        .rlast  (),
+        .rvalid (),
+        .rready (),
+
+        .awid   (   ),
+        .awaddr (   ),
+        .awlen  (   ),
+        .awsize (   ),
+        .awburst(   ),
+        .awlock (),
+        .awcache(),
+        .awprot (),
+        .awvalid( 1'b0  ),
+        .awready(   ),
+
+        .wid    (   ),
+        .wdata  (   ),
+        .wstrb  (   ),
+        .wvalid ( 1'b0  ),
+        .wlast  (   ),
+        .wready (   ),
+
+        .bid    (),
+        .bresp  (),
+        .bvalid (),
+        .bready  (1'b1)
+     );
+
+
 //////////// INTERFACE DRIVERS /////////////////
 
 fifo_write_driver 
@@ -178,7 +233,7 @@ fifo_write_driver
 
 xy_request_driver(
     .clk         (clk)                     ,
-    .reset       (~reset)                  ,
+    .reset       (reset)                  ,
     .out         ()     ,
     .ready       ()       ,
     .address     (),
@@ -197,7 +252,7 @@ xy_request_driver(
 `ifdef INSERT_MONITORS
 
 inf_monitor #( .WIDTH (),.DEBUG (0) , .SKIP_ZERO (1), .FILE_NAME("../simvectors/ibc_cache_receive.bin"))
-cache_out_mon( .clk (clk),.reset(~reset),.data1(),.valid   () ,.ready(1'b1));
+cache_out_mon( .clk (clk),.reset(reset),.data1(),.valid   () ,.ready(1'b1));
 
 
 `endif

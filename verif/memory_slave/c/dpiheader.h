@@ -37,5 +37,16 @@ void
 memory_write(
     int location,
     byte data);
+    
+DPI_LINK_DECL DPI_DLLESPEC
+int
+add_ref_DPB(
+    int base_addr, 
+    int poc, 
+    int height, 
+    int width, 
+    int bit_depth, 
+    int SubWidthC, 
+    int SubHeightC);
 
 #endif 
