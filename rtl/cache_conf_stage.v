@@ -11,14 +11,8 @@ module cache_conf_stage
    pic_width,
    pic_height,
    
-   xT_in_min_tus,
-   yT_in_min_tus,
    ref_idx_in,
-   ntbs_sh,
-   res_present,
-   bi_pred_block_cache,
-   x0_tu_end_in_min_tus,
-   y0_tu_end_in_min_tus,
+
    luma_ref_start_x,
    luma_ref_start_y,
    chma_ref_start_x,
@@ -30,14 +24,9 @@ module cache_conf_stage
    d_frac_x_out,
    d_frac_y_out,
    
-   xT_in_min_tus_in,
-   yT_in_min_tus_in,
+
    ref_idx_in_in,
-   ntbs_sh_in,
-   res_present_in,
-   bi_pred_block_cache_in,
-   x0_tu_end_in_min_tus_in,
-   y0_tu_end_in_min_tus_in,
+
    luma_ref_start_x_in,
    luma_ref_start_y_in,
    chma_ref_start_x_in,
@@ -73,20 +62,14 @@ module cache_conf_stage
    
 );
 
-    `include "../sim/cache_configs_def.v"
     `include "../sim/pred_def.v"
     `include "../sim/inter_axi_def.v"
+    `include "../sim/cache_configs_def.v"
 
 //---------------------------------------------------------------------------------------------------------------------
 // localparam definitions
 //---------------------------------------------------------------------------------------------------------------------
-    parameter                           LUMA_DIM_WDTH		    	= 4;        // out block dimension  max 11
-    parameter                           CHMA_DIM_WDTH               = 3;        // max 5 (2+3) / (4+3)
-    parameter                           CHMA_DIM_HIGT               = 3;        // max 5 (2+3) / (4+3)
-    
-    parameter                           LUMA_REF_BLOCK_WIDTH        = 4'd11;
-    parameter                           CHMA_REF_BLOCK_WIDTH        = (C_SUB_WIDTH  == 1) ? 3'd7: 3'd5;
-    parameter                           CHMA_REF_BLOCK_HIGHT        = (C_SUB_HEIGHT == 1) ? 3'd7: 3'd5;
+
 //---------------------------------------------------------------------------------------------------------------------
 // I/O signals
 //---------------------------------------------------------------------------------------------------------------------
@@ -99,17 +82,11 @@ module cache_conf_stage
    input  signed [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]   pic_width;   
    input  signed [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]   pic_height;   
 
-	output reg op_conf_fifo_wr_en;
+   output reg op_conf_fifo_wr_en;
    
-   input   [X11_ADDR_WDTH - LOG2_MIN_TU_SIZE - 1:0]     xT_in_min_tus_in;
-   input   [X11_ADDR_WDTH - LOG2_MIN_TU_SIZE - 1:0]     yT_in_min_tus_in;
    input	  [REF_ADDR_WDTH-1:0]                          ref_idx_in_in;
    
-   input                                          res_present_in;
-   input                                          bi_pred_block_cache_in;
-   input [NTBS_SH_WDTH -1: 0]                     ntbs_sh_in;
-   input [X11_ADDR_WDTH - LOG2_MIN_TU_SIZE - 1:0] x0_tu_end_in_min_tus_in;
-   input [X11_ADDR_WDTH - LOG2_MIN_TU_SIZE - 1:0] y0_tu_end_in_min_tus_in;
+
    input [MV_C_FRAC_WIDTH_HIGH -1:0]              ch_frac_x;
    input [MV_C_FRAC_WIDTH_HIGH -1:0]              ch_frac_y;	
    
@@ -123,9 +100,7 @@ module cache_conf_stage
 	input  [LUMA_DIM_WDTH - 1:0]   			                  luma_ref_width_x_in            ;	
    input  [LUMA_DIM_WDTH - 1:0]                             luma_ref_height_y_in           ;  
    
-   output reg [X11_ADDR_WDTH - LOG2_MIN_TU_SIZE - 1:0] xT_in_min_tus;
-   output reg [X11_ADDR_WDTH - LOG2_MIN_TU_SIZE - 1:0] yT_in_min_tus;
-    
+
    output reg         [REF_ADDR_WDTH-1:0]                 ref_idx_in;   
    output reg         [LUMA_DIM_WDTH-1:0]                 rf_blk_hgt_in;
    output reg         [LUMA_DIM_WDTH-1:0]                 rf_blk_wdt_in;
@@ -163,11 +138,7 @@ module cache_conf_stage
    output reg         [LUMA_DIM_WDTH - 1:0]                   luma_ref_width_x;
    output reg         [LUMA_DIM_WDTH - 1:0]                   luma_ref_height_y;
    
-   output reg                                          res_present;
-   output reg                                          bi_pred_block_cache;
-   output reg [NTBS_SH_WDTH -1: 0]                     ntbs_sh;
-   output reg [X11_ADDR_WDTH - LOG2_MIN_TU_SIZE - 1:0] x0_tu_end_in_min_tus;
-   output reg [X11_ADDR_WDTH - LOG2_MIN_TU_SIZE - 1:0] y0_tu_end_in_min_tus;
+
    output reg  [MV_C_FRAC_WIDTH_HIGH -1:0]             d_frac_x_out;
    output reg  [MV_C_FRAC_WIDTH_HIGH -1:0]             d_frac_y_out;	
 
@@ -221,15 +192,7 @@ always@(posedge clk) begin : SET_CONFIG
       if(~( ~tag_compare_stage_ready)) begin
          if(valid_in) begin
             op_conf_fifo_wr_en <= 1;
-            xT_in_min_tus <= xT_in_min_tus_in;
-            yT_in_min_tus <= yT_in_min_tus_in;
-            ntbs_sh  <= ntbs_sh_in;
-            
-            res_present <= res_present_in;
-            bi_pred_block_cache <= bi_pred_block_cache_in;
-            x0_tu_end_in_min_tus <= x0_tu_end_in_min_tus_in;
-            y0_tu_end_in_min_tus <= y0_tu_end_in_min_tus_in;
-
+ 
             luma_ref_start_x    <=  luma_ref_start_x_in  ;
             luma_ref_start_y    <=  luma_ref_start_y_in  ;   
             chma_ref_start_x    <=  chma_ref_start_x_in >>>(C_SUB_WIDTH -1) ;       

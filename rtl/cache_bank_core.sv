@@ -91,9 +91,9 @@ module cache_bank_core
 
 );
 
-    `include "../sim/cache_configs_def.v"
     `include "../sim/pred_def.v"
     `include "../sim/inter_axi_def.v"
+    `include "../sim/cache_configs_def.v"
     
 	parameter YY_WIDTH = PIXEL_WIDTH*DBF_OUT_Y_BLOCK_SIZE*DBF_OUT_Y_BLOCK_SIZE;
 	parameter CH_WIDTH = PIXEL_WIDTH*DBF_OUT_CH_BLOCK_HIGHT*DBF_OUT_CH_BLOCK_WIDTH;
@@ -101,10 +101,6 @@ module cache_bank_core
     //---------------------------------------------------------------------------------------------------------------------
     // parameter definitions
     //---------------------------------------------------------------------------------------------------------------------
-      parameter                           LUMA_DIM_WDTH		    	    = 4;        // out block dimension  max 11
-      parameter                           CHMA_DIM_WDTH               = 3;        // max 5 (2+3) / (4+3)
-      parameter                           CHMA_DIM_HIGT               = 3;        // max 5 (2+3) / (4+3)
-      parameter 							      BLOCK_NUMBER_WIDTH 			 = 6; // Since 32 elements can be occupied in hit fifo, if all of them come from single cache line block 6 bits needed to uniquely identify a block
 
     //---------------------------------------------------------------------------------------------------------------------
     // I/O signals

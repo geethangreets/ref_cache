@@ -1,1 +1,6 @@
 prj/ref_cache.runs/
+prj/ref_cache.cache/
+sim/work/
+cproj/ref_buf_mem_slave/ref_buf_mem_slave/Debug/
+cproj/ref_buf_mem_slave/Debug/
+simvectors/

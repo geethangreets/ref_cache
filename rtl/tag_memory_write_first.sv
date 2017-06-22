@@ -13,8 +13,8 @@ module tag_memory_write_first
 
 );
 
-    `include "../sim/cache_configs_def.v"
     `include "../sim/pred_def.v"
+    `include "../sim/cache_configs_def.v"
     
     //---------------------------------------------------------------------------------------------------------------------
     // parameter definitions

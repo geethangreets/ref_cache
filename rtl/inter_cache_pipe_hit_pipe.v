@@ -11,16 +11,6 @@ module inter_cache_pipe_hit_pipe
     valid_in,           // input valid
     cache_idle_out,         // 1 - cache is ready to accept new input
     
-    res_present_in,         // optional tie to zero
-    res_present_out,        // optional tie to zero
-
-	
-    bi_pred_block_cache_in,     // optional tie to zero
-    bi_pred_block_cache_out,    // optional tie to zero
-    x0_tu_end_in_min_tus_in,    // optional tie to zero
-    x0_tu_end_in_min_tus_out,   // optional tie to zero
-    y0_tu_end_in_min_tus_in,    // optional tie to zero
-    y0_tu_end_in_min_tus_out,   // optional tie to zero
 
     luma_ref_width_x_in   ,     //width of reference block in luma
     chma_ref_width_x_in   ,     //width of reference block in chroma
@@ -58,13 +48,6 @@ module inter_cache_pipe_hit_pipe
     ch_frac_x_out,      //optional 
     ch_frac_y_out,      //optional
 
-    xT_in_min_tus_in,   //current block x value book keeping
-    yT_in_min_tus_in,   //current block y value book keeping
-    xT_in_min_tus_out,  //current block x value will passed along with reference pixels
-    yT_in_min_tus_out,  //current block y value will passed along with reference pixels
-    
-    ntbs_sh_in,         //optional to zero
-    ntbs_sh_out,        //optional
 
     filer_idle_in,      // 1 means down stream module is ready to accept new data
     luma_ref_block_out, // y reference block
@@ -90,9 +73,9 @@ module inter_cache_pipe_hit_pipe
 
 );
 
-    `include "../sim/cache_configs_def.v"
     `include "../sim/pred_def.v"
     `include "../sim/inter_axi_def.v"
+    `include "../sim/cache_configs_def.v"
     
 	parameter YY_WIDTH = PIXEL_WIDTH*DBF_OUT_Y_BLOCK_SIZE*DBF_OUT_Y_BLOCK_SIZE;
 	parameter CH_WIDTH = PIXEL_WIDTH*DBF_OUT_CH_BLOCK_HIGHT*DBF_OUT_CH_BLOCK_WIDTH;
@@ -100,17 +83,6 @@ module inter_cache_pipe_hit_pipe
     //---------------------------------------------------------------------------------------------------------------------
     // parameter definitions
     //---------------------------------------------------------------------------------------------------------------------
-    
-    parameter                           LUMA_DIM_WDTH		    	= 4;        // out block dimension  max 11
-    // parameter                           LUMA_DIM_ADDR_WDTH          = 7;        //max 121
-    parameter                           CHMA_DIM_WDTH               = 3;        // max 5 (2+3) / (4+3)
-    parameter                           CHMA_DIM_HIGT               = 3;        // max 5 (2+3) / (4+3)
-    // parameter                           CHMA_DIM_ADDR_WDTH          = 5;        // max 25 
-    parameter                           LUMA_REF_BLOCK_WIDTH        = 4'd8;
-    parameter                           CHMA_REF_BLOCK_WIDTH        = (C_SUB_WIDTH  == 1) ? 3'd8: 3'd4;
-    parameter                           CHMA_REF_BLOCK_HIGHT        = (C_SUB_HEIGHT == 1) ? 3'd8: 3'd4;
-	
-	 parameter 							       BLOCK_NUMBER_WIDTH 			  = 6; // Since 32 elements can be occupied in hit fifo, if all of them come from single cache line block 6 bits needed to uniquely identify a block
 
     parameter                           CACHE_LINE_LUMA_OFFSET      = 0;
     parameter                           CACHE_LINE_CB_OFFSET      = CACHE_LINE_WDTH * BIT_DEPTH;
@@ -151,26 +123,6 @@ module inter_cache_pipe_hit_pipe
    output                                          cache_full_idle;
     
 // config IOs
-   input res_present_in;
-   output  res_present_out;
-
-   input bi_pred_block_cache_in;
-   output  bi_pred_block_cache_out;
-
-   input   [X11_ADDR_WDTH - LOG2_MIN_TU_SIZE - 1:0]     x0_tu_end_in_min_tus_in;
-   output  [X11_ADDR_WDTH - LOG2_MIN_TU_SIZE - 1:0]     x0_tu_end_in_min_tus_out;
-
-   input   [X11_ADDR_WDTH - LOG2_MIN_TU_SIZE - 1:0]     y0_tu_end_in_min_tus_in;
-   output  [X11_ADDR_WDTH - LOG2_MIN_TU_SIZE - 1:0]     y0_tu_end_in_min_tus_out;
-
-   input   [X11_ADDR_WDTH - LOG2_MIN_TU_SIZE - 1:0]     xT_in_min_tus_in;
-   input   [X11_ADDR_WDTH - LOG2_MIN_TU_SIZE - 1:0]     yT_in_min_tus_in;
-   output  [X11_ADDR_WDTH - LOG2_MIN_TU_SIZE - 1:0]     xT_in_min_tus_out;
-   output  [X11_ADDR_WDTH - LOG2_MIN_TU_SIZE - 1:0]     yT_in_min_tus_out;
-
-     
-   input  [NTBS_SH_WDTH -1: 0]                          ntbs_sh_in;
-   output [NTBS_SH_WDTH -1: 0]                          ntbs_sh_out;
 
 	input  signed [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0] 	luma_ref_start_x_in;	
 	input  signed [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0] 	luma_ref_start_y_in;
@@ -178,14 +130,14 @@ module inter_cache_pipe_hit_pipe
 	input  signed [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0] 	chma_ref_start_y_in;	
 	
 	input  [LUMA_DIM_WDTH - 1:0]   			               chma_ref_width_x_in            ;	
-   input  [LUMA_DIM_WDTH - 1:0]                          chma_ref_height_y_in           ;   
+    input  [LUMA_DIM_WDTH - 1:0]                           chma_ref_height_y_in           ;   
 	input  [LUMA_DIM_WDTH - 1:0]   			               luma_ref_width_x_in            ;	
-   input  [LUMA_DIM_WDTH - 1:0]                          luma_ref_height_y_in           ;  
+    input  [LUMA_DIM_WDTH - 1:0]                           luma_ref_height_y_in           ;  
 
-   output  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]       luma_ref_start_x_out   ;
-   output  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]       luma_ref_start_y_out   ;
-   output  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]       chma_ref_start_x_out   ;
-   output  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]       chma_ref_start_y_out   ;
+    output  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]       luma_ref_start_x_out   ;
+    output  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]       luma_ref_start_y_out   ;
+    output  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]       chma_ref_start_x_out   ;
+    output  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]       chma_ref_start_y_out   ;
    
    output   [LUMA_DIM_WDTH - 1:0]                        chma_ref_width_x_out   ;
    output   [LUMA_DIM_WDTH - 1:0]                        chma_ref_height_y_out  ;
@@ -226,23 +178,23 @@ module inter_cache_pipe_hit_pipe
 // axi master interface  ------------------------------------------       
     output	 	[AXI_ADDR_WDTH-1:0]		                           ref_pix_axi_ar_addr;
     wire 		[AXI_ADDR_WDTH-1:0]		                           ref_pix_axi_ar_addr_fifo_in;
-    output wire [7:0]					                              ref_pix_axi_ar_len;
-    output wire	[2:0]					                              ref_pix_axi_ar_size;
-    output wire [1:0]					                              ref_pix_axi_ar_burst;
-    output wire [2:0]					                              ref_pix_axi_ar_prot;
-    output 							            	                     ref_pix_axi_ar_valid;
+    output wire [7:0]					                           ref_pix_axi_ar_len;
+    output wire	[2:0]					                           ref_pix_axi_ar_size;
+    output wire [1:0]					                           ref_pix_axi_ar_burst;
+    output wire [2:0]					                           ref_pix_axi_ar_prot;
+    output 							            	               ref_pix_axi_ar_valid;
 
-    wire							            	                        ref_pix_axi_ar_fifo_empty;
-    wire							            	                        ref_pix_axi_ar_fifo_full;
-    wire							            	                        ref_pix_axi_ar_fifo_rd_en;
-    input 								                                 ref_pix_axi_ar_ready;
+    wire							            	               ref_pix_axi_ar_fifo_empty;
+    wire							            	               ref_pix_axi_ar_fifo_full;
+    wire							            	               ref_pix_axi_ar_fifo_rd_en;
+    input 								                           ref_pix_axi_ar_ready;
                 
-    input		[AXI_CACHE_DATA_WDTH-1:0]		                     ref_pix_axi_r_data;
+    input		[AXI_CACHE_DATA_WDTH-1:0]		                   ref_pix_axi_r_data;
 
-    input		[1:0]					                                 ref_pix_axi_r_resp;
-    input 								                                 ref_pix_axi_r_last;
-    input								                                 ref_pix_axi_r_valid;
-    output reg 							                              ref_pix_axi_r_ready;
+    input		[1:0]					                           ref_pix_axi_r_resp;
+    input 								                           ref_pix_axi_r_last;
+    input								                           ref_pix_axi_r_valid;
+    output reg 							                           ref_pix_axi_r_ready;
     
     // pipeline controlls
     wire set_input_stage_valid;
@@ -282,7 +234,7 @@ module inter_cache_pipe_hit_pipe
    wire     [1:0]                                   delta_x_2d_hit   ;
    wire     [1:0]                                   delta_y_2d_hit   ;
    
-	wire     [1:0]                                   curr_x_2d_read   ;
+   wire     [1:0]                                   curr_x_2d_read   ;
    wire     [1:0]                                   curr_y_2d_read   ;
    wire     [1:0]                                   delta_x_2d_read  ;
    wire     [1:0]                                   delta_y_2d_read  ;
@@ -497,17 +449,6 @@ module inter_cache_pipe_hit_pipe
     wire  [LUMA_DIM_WDTH - 1:0]                   luma_ref_width_x;
     wire  [LUMA_DIM_WDTH - 1:0]                   luma_ref_height_y;
 
-    wire res_present;
-
-    wire bi_pred_block_cache;
-    wire [X11_ADDR_WDTH - LOG2_MIN_TU_SIZE - 1:0] x0_tu_end_in_min_tus;
-    wire [X11_ADDR_WDTH - LOG2_MIN_TU_SIZE - 1:0] y0_tu_end_in_min_tus;
-    
-    wire [NTBS_SH_WDTH -1: 0] ntbs_sh;
-
-    wire [X11_ADDR_WDTH - LOG2_MIN_TU_SIZE - 1:0] xT_in_min_tus;
-    wire [X11_ADDR_WDTH - LOG2_MIN_TU_SIZE - 1:0] yT_in_min_tus;
-
 	
     wire  [MV_C_FRAC_WIDTH_HIGH -1:0]      d_frac_x_out;
     wire  [MV_C_FRAC_WIDTH_HIGH -1:0]      d_frac_y_out;	
@@ -557,8 +498,7 @@ module inter_cache_pipe_hit_pipe
 	always@(posedge clk) begin
 		if(valid_in) begin
 			$fwrite(file_in, "%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x\n",
-			res_present_in,bi_pred_block_cache_in,x0_tu_end_in_min_tus_in,y0_tu_end_in_min_tus_in,
-			xT_in_min_tus_in,yT_in_min_tus_in,luma_ref_start_x_in,luma_ref_start_y_in,
+			luma_ref_start_x_in,luma_ref_start_y_in,
 			chma_ref_start_x_in,chma_ref_start_y_in,chma_ref_width_x_in,chma_ref_height_y_in,
 			luma_ref_width_x_in,luma_ref_height_y_in,ch_frac_x,ch_frac_y,
 			ref_idx_in_in,pic_width,pic_height);
@@ -587,36 +527,8 @@ module inter_cache_pipe_hit_pipe
 		
    assign                  ref_pix_axi_ar_size   = `AX_SIZE_64;
    assign                  ref_pix_axi_ar_len    = (CACHE_LINE_WDTH*PIXEL_BITS-1)/AXI_CACHE_DATA_WDTH;
-/* 
-// synthesis translate_off
-cache_print cache_print_block(
-    .clk(clk),
-    .reset(reset),
-	.bi_pred_block_cache_in(bi_pred_block_cache_in),
-	.cache_valid_in	(valid_in		),
-	.rready			(ref_pix_axi_r_ready),
-	.rvalid   (ref_pix_axi_r_valid),
-	.xT_in_min_tus	(xT_in_min_tus	),
-	.yT_in_min_tus	(yT_in_min_tus	),
-	.delta_x(delta_x),
-	.delta_y(delta_y),
-    .valid_in(ref_pix_axi_ar_valid),
-    .ready_in(ref_pix_axi_ar_ready),
-    .iu_idx_val(iu_idx_val),
-    .iu_idx_row_val(iu_idx_row_val),
-    .ref_idx_val(ref_idx_val),
-    .bu_idx_val(bu_idx_val)
-); */
 
-// always@(posedge clk) begin
-	// if(data_read_stage_valid & ref_pix_axi_r_valid) begin
-		// if(ref_pix_axi_r_last) begin
-			// $display("contention for write");
-			// $stop;
-		// end
-	// end
-// end
-// synthesis translate_on
+
 
 
     num_val_clines_generator num_val_clines_block_luma (
@@ -659,7 +571,7 @@ cache_print cache_print_block(
     .w_en_in(cache_wr_en)
     );
 
-       geet_fifo_almost_full #(
+   geet_fifo_almost_full #(
 		.LOG2_FIFO_DEPTH(3),
         .FIFO_DATA_WIDTH(
 			AXI_ADDR_WDTH
@@ -677,70 +589,13 @@ cache_print cache_print_block(
 		}), 
 		// .d_empty(d_miss_elem_fifo_empty),
         .empty(ref_pix_axi_ar_fifo_empty), 
-        .program_full(ref_pix_axi_ar_fifo_full)
+        .program_full(ref_pix_axi_ar_fifo_full),
+        .almost_full(),
+        .full()
         );	
 		
 		
-`ifdef CACHE_FIFOS
-`ifdef HEVC_4K
-      miss_elem_fifo_4k miss_elem_fifo(
-`else
-      miss_elem_fifo miss_elem_fifo(
-`endif
-        .clk(clk), 
-        .srst(reset), 
-        .wr_en(miss_elem_fifo_wr_en), 
-        .rd_en(miss_elem_fifo_rd_en), 
-        .din({
-			block_number_3,
-			set_idx_miss,
-			last_block_valid_2d,
-			luma_dest_enable_reg,
-			chma_dest_enable_reg,
-         cl_strt_x_luma_2d,
-         cl_strt_x_chma_2d,
-         cl_strt_y_luma_2d,
-         cl_strt_y_chma_2d,
-         dst_strt_x_luma_d,
-         dest_end_x_luma_d,
-         dst_strt_y_luma_d,
-         dest_end_y_luma_d,
-         dst_strt_x_chma_d,
-         dest_end_x_chma_d,
-         dst_strt_y_chma_d,
-         dest_end_y_chma_d,
-			set_addr_2d
-		
-		}), 
-        .dout({
-			block_number_3_read,
-			set_idx_miss_read,
-			last_block_valid_2d_read,
-			luma_dest_enable_reg_read,
-			chma_dest_enable_reg_read,
-			cl_strt_x_luma_2d_read,
-         cl_strt_x_chma_2d_read,
-         cl_strt_y_luma_2d_read,
-         cl_strt_y_chma_2d_read,
-         dst_strt_x_luma_d_read,
-         dest_end_x_luma_d_read,
-         dst_strt_y_luma_d_read,
-         dest_end_y_luma_d_read,
-         dst_strt_x_chma_d_read,
-         dest_end_x_chma_d_read,
-         dst_strt_y_chma_d_read,
-         dest_end_y_chma_d_read,
-			set_addr_read		
-			
-		}), 
-		// .d_empty(d_miss_elem_fifo_empty),
-        .empty(miss_elem_fifo_empty), 
-		  .data_count(mis_fifo_data_count),
-        .prog_full(miss_elem_fifo_full),
-        .full()
-        );
-		  
-`else		
+	
        geet_fifo_almost_full #(
 		.LOG2_FIFO_DEPTH(MIS_FIFO_DEPTH),
       .FIFO_DATA_WIDTH(2*4+ BLOCK_NUMBER_WIDTH +1+1+1+ C_N_WAY + CHMA_DIM_WDTH * 2 + CHMA_DIM_HIGT * 2 + LUMA_DIM_WDTH* 4 + SET_ADDR_WDTH  + C_L_H_SIZE + C_L_V_SIZE + C_L_H_SIZE_C + C_L_V_SIZE_C)
@@ -757,24 +612,24 @@ cache_print cache_print_block(
          delta_y_2d   ,
         
         
-			block_number_3,
-			set_idx_miss,
-			last_block_valid_2d,
-			luma_dest_enable_reg,
-			chma_dest_enable_reg,
-			cl_strt_x_luma_2d,
-         cl_strt_x_chma_2d,
-         cl_strt_y_luma_2d,
-         cl_strt_y_chma_2d,
-         dst_strt_x_luma_d,
-         dest_end_x_luma_d,
-         dst_strt_y_luma_d,
-         dest_end_y_luma_d,
-         dst_strt_x_chma_d,
-         dest_end_x_chma_d,
-         dst_strt_y_chma_d,
-         dest_end_y_chma_d,
-			set_addr_2d
+        block_number_3,
+        set_idx_miss,
+        last_block_valid_2d,
+        luma_dest_enable_reg,
+        chma_dest_enable_reg,
+        cl_strt_x_luma_2d,
+        cl_strt_x_chma_2d,
+        cl_strt_y_luma_2d,
+        cl_strt_y_chma_2d,
+        dst_strt_x_luma_d,
+        dest_end_x_luma_d,
+        dst_strt_y_luma_d,
+        dest_end_y_luma_d,
+        dst_strt_x_chma_d,
+        dest_end_x_chma_d,
+        dst_strt_y_chma_d,
+        dest_end_y_chma_d,
+        set_addr_2d
 		
 		}), 
         .d_out({
@@ -785,24 +640,24 @@ cache_print cache_print_block(
          delta_y_2d_read   ,
         
         
-			block_number_3_read,
-			set_idx_miss_read,
-			last_block_valid_2d_read,
-			luma_dest_enable_reg_read,
-			chma_dest_enable_reg_read,
-			cl_strt_x_luma_2d_read,
-         cl_strt_x_chma_2d_read,
-         cl_strt_y_luma_2d_read,
-         cl_strt_y_chma_2d_read,
-         dst_strt_x_luma_d_read,
-         dest_end_x_luma_d_read,
-         dst_strt_y_luma_d_read,
-         dest_end_y_luma_d_read,
-         dst_strt_x_chma_d_read,
-         dest_end_x_chma_d_read,
-         dst_strt_y_chma_d_read,
-         dest_end_y_chma_d_read,
-			set_addr_read		
+        block_number_3_read,
+        set_idx_miss_read,
+        last_block_valid_2d_read,
+        luma_dest_enable_reg_read,
+        chma_dest_enable_reg_read,
+        cl_strt_x_luma_2d_read,
+        cl_strt_x_chma_2d_read,
+        cl_strt_y_luma_2d_read,
+        cl_strt_y_chma_2d_read,
+        dst_strt_x_luma_d_read,
+        dest_end_x_luma_d_read,
+        dst_strt_y_luma_d_read,
+        dest_end_y_luma_d_read,
+        dst_strt_x_chma_d_read,
+        dest_end_x_chma_d_read,
+        dst_strt_y_chma_d_read,
+        dest_end_y_chma_d_read,
+        set_addr_read		
 			
 		}), 
 		// .d_empty(d_miss_elem_fifo_empty),
@@ -811,67 +666,6 @@ cache_print cache_print_block(
 		  .almost_full(),
         .full()
         );
-`endif
-`ifdef CACHE_FIFOS
-`ifdef HEVC_4K
-hit_elem_fifo_4k hit_elem_fifo (
-`else
-hit_elem_fifo hit_elem_fifo (
-`endif
-  .clk(clk), // input clk
-  .srst(reset), // input rst
-  .din({
-			block_number_3,
-			set_idx_d,
-			last_block_valid_2d,
-			luma_dest_enable_reg,
-			chma_dest_enable_reg,
-			cl_strt_x_luma_2d,
-         cl_strt_x_chma_2d,
-         cl_strt_y_luma_2d,
-         cl_strt_y_chma_2d,
-         dst_strt_x_luma_d,
-         dest_end_x_luma_d,
-         dst_strt_y_luma_d,
-         dest_end_y_luma_d,
-         dst_strt_x_chma_d,
-         dest_end_x_chma_d,
-         dst_strt_y_chma_d,
-         dest_end_y_chma_d,
-			set_addr_2d
-		
-		}), // input [285 : 0] din
-  .wr_en(hit_elem_fifo_wr_en), // input wr_en
-  .rd_en(hit_elem_fifo_rd_en), // input rd_en
-  .dout({
-			block_number_3_hit,
-			set_idx_hit,
-			last_block_valid_2d_hit,
-			luma_dest_enable_reg_hit,
-			chma_dest_enable_reg_hit,
-			cl_strt_x_luma_2d_hit,
-         cl_strt_x_chma_2d_hit,
-         cl_strt_y_luma_2d_hit,
-         cl_strt_y_chma_2d_hit,
-         dst_strt_x_luma_d_hit,
-         dest_end_x_luma_d_hit,
-         dst_strt_y_luma_d_hit,
-         dest_end_y_luma_d_hit,
-         dst_strt_x_chma_d_hit,
-         dest_end_x_chma_d_hit,
-         dst_strt_y_chma_d_hit,
-         dest_end_y_chma_d_hit,
-			set_addr_hit,
-					
-			
-		}), // output [285 : 0] dout
-  .full(), // output full
-  .empty(hit_elem_fifo_empty), 
-  .data_count(hit_fifo_data_count),
-  .prog_full(hit_elem_fifo_full)
-);    
-`else    
-
 
        geet_fifo_almost_full #(
          .LOG2_FIFO_DEPTH(HIT_FIFO_DEPTH),
@@ -883,28 +677,28 @@ hit_elem_fifo hit_elem_fifo (
         .rd_en(hit_elem_fifo_rd_en), 
         .d_in({
         
-         curr_x_2d    ,
-         curr_y_2d    ,
-         delta_x_2d   ,
-         delta_y_2d   ,
-			block_number_3,
-			set_idx_d,
-			last_block_valid_2d,
-			luma_dest_enable_reg,
-			chma_dest_enable_reg,
-			cl_strt_x_luma_2d,
-         cl_strt_x_chma_2d,
-         cl_strt_y_luma_2d,
-         cl_strt_y_chma_2d,
-         dst_strt_x_luma_d,
-         dest_end_x_luma_d,
-         dst_strt_y_luma_d,
-         dest_end_y_luma_d,
-         dst_strt_x_chma_d,
-         dest_end_x_chma_d,
-         dst_strt_y_chma_d,
-         dest_end_y_chma_d,
-			set_addr_2d
+        curr_x_2d    ,
+        curr_y_2d    ,
+        delta_x_2d   ,
+        delta_y_2d   ,
+        block_number_3,
+        set_idx_d,
+        last_block_valid_2d,
+        luma_dest_enable_reg,
+        chma_dest_enable_reg,
+        cl_strt_x_luma_2d,
+        cl_strt_x_chma_2d,
+        cl_strt_y_luma_2d,
+        cl_strt_y_chma_2d,
+        dst_strt_x_luma_d,
+        dest_end_x_luma_d,
+        dst_strt_y_luma_d,
+        dest_end_y_luma_d,
+        dst_strt_x_chma_d,
+        dest_end_x_chma_d,
+        dst_strt_y_chma_d,
+        dest_end_y_chma_d,
+        set_addr_2d
 		
 		}), 
         .d_out({
@@ -914,24 +708,24 @@ hit_elem_fifo hit_elem_fifo (
          delta_x_2d_hit   ,
          delta_y_2d_hit   ,
         
-			block_number_3_hit,
-			set_idx_hit,
-			last_block_valid_2d_hit,
-			luma_dest_enable_reg_hit,
-			chma_dest_enable_reg_hit,
-			cl_strt_x_luma_2d_hit,
-         cl_strt_x_chma_2d_hit,
-         cl_strt_y_luma_2d_hit,
-         cl_strt_y_chma_2d_hit,
-         dst_strt_x_luma_d_hit,
-         dest_end_x_luma_d_hit,
-         dst_strt_y_luma_d_hit,
-         dest_end_y_luma_d_hit,
-         dst_strt_x_chma_d_hit,
-         dest_end_x_chma_d_hit,
-         dst_strt_y_chma_d_hit,
-         dest_end_y_chma_d_hit,
-			set_addr_hit
+        block_number_3_hit,
+        set_idx_hit,
+        last_block_valid_2d_hit,
+        luma_dest_enable_reg_hit,
+        chma_dest_enable_reg_hit,
+        cl_strt_x_luma_2d_hit,
+        cl_strt_x_chma_2d_hit,
+        cl_strt_y_luma_2d_hit,
+        cl_strt_y_chma_2d_hit,
+        dst_strt_x_luma_d_hit,
+        dest_end_x_luma_d_hit,
+        dst_strt_y_luma_d_hit,
+        dest_end_y_luma_d_hit,
+        dst_strt_x_chma_d_hit,
+        dest_end_x_chma_d_hit,
+        dst_strt_y_chma_d_hit,
+        dest_end_y_chma_d_hit,
+        set_addr_hit
 		}), 
 		// .d_empty(d_hit_elem_fifo_empty),
         .empty(hit_elem_fifo_empty), 
@@ -939,97 +733,7 @@ hit_elem_fifo hit_elem_fifo (
         .almost_full(),
         .full()
         );            						
-`endif			 
 
-`ifdef CACHE_FIFOS_4K	
-
-
-output_fifo_luma_4k output_fifo_luma_block (
-  .clk(clk), // input clk
-  .rst(reset), // input rst
-  .din(block_121_fifo_in), // input [967 : 0] din
-  .wr_en(block_ready_internal), // input wr_en
-  .rd_en(cache_valid_out), // input rd_en
-  .dout(luma_ref_block_out), // output [967 : 0] dout
-  // .full(output_fifo_full), // output full
-  // .almost_full(output_fifo_almost_full_only), // output almost_full
-  .empty(output_fifo_empty), // output empty
-  .data_count(output_fifo_data_count)
-  // .prog_full(output_fifo_program_full) // output prog_full
-);
-	assign output_fifo_program_full = output_fifo_data_count > 8 ? 1:0;
-	assign output_fifo_almost_full_only = output_fifo_data_count > 9 ? 1:0;
-	assign output_fifo_full = output_fifo_data_count > 10 ? 1:0;
-
-output_fifo_rest_4k output_fifo_rest_block (
-  .clk(clk), // input clk
-  .rst(reset), // input rst
-  .din({
-				res_present_fifo_in,
-				bi_pred_block_cache_fifo_in,
-				x0_tu_end_in_min_tus_fifo_in,
-				y0_tu_end_in_min_tus_fifo_in,
-				xT_in_min_tus_fifo_in,
-				yT_in_min_tus_fifo_in,
-				luma_ref_start_x_fifo_in   ,
-				luma_ref_start_y_fifo_in   ,
-				chma_ref_start_x_fifo_in   ,
-				chma_ref_start_y_fifo_in   ,
-				chma_ref_width_x_fifo_in   ,
-				chma_ref_height_y_fifo_in  ,
-				luma_ref_width_x_fifo_in   ,
-				luma_ref_height_y_fifo_in  ,
-				ch_frac_x_fifo_in,
-				ch_frac_y_fifo_in,
-				block_25cb_fifo_in,
-				block_25cr_fifo_in,
-				block_x_offset_luma_fifo_in,
-				block_y_offset_luma_fifo_in,
-				block_x_offset_chma_fifo_in,
-				block_y_offset_chma_fifo_in,
-				block_x_end_luma_fifo_in,
-				block_y_end_luma_fifo_in,
-				block_x_end_chma_fifo_in,
-				block_y_end_chma_fifo_in
-			}), // input [967 : 0] din
-  .wr_en(block_ready_internal), // input wr_en
-  .rd_en(cache_valid_out), // input rd_en
-  .dout({
-				res_present_out,
-				bi_pred_block_cache_out,
-				x0_tu_end_in_min_tus_out,
-				y0_tu_end_in_min_tus_out,
-				xT_in_min_tus_out,
-				yT_in_min_tus_out,
-				luma_ref_start_x_out   ,
-				luma_ref_start_y_out   ,
-				chma_ref_start_x_out   ,
-				chma_ref_start_y_out   ,
-				chma_ref_width_x_out   ,
-				chma_ref_height_y_out  ,
-				luma_ref_width_x_out   ,
-				luma_ref_height_y_out  ,
-				ch_frac_x_out,
-				ch_frac_y_out,
-				cb_ref_block_out,
-				cr_ref_block_out,
-				block_x_offset_luma,
-				block_y_offset_luma,
-				block_x_offset_chma,
-				block_y_offset_chma,
-				block_x_end_luma,
-				block_y_end_luma,
-				block_x_end_chma,
-				block_y_end_chma
-			}) // output [967 : 0] dout
-  //.full(full), // output full
-  //.almost_full(output_fifo_almost_full_only), // output almost_full
-  //.empty(output_fifo_empty), // output empty
-  //.prog_full() // output prog_full
-);
-
-
-`else		 
 
    
    always@(*) begin
@@ -1041,13 +745,6 @@ output_fifo_rest_4k output_fifo_rest_block (
        geet_fifo_almost_full #(
 		.LOG2_FIFO_DEPTH(OUT_FIFO_DEPTH),
         .FIFO_DATA_WIDTH(
-			1 															+
-			1 															+
-			(X11_ADDR_WDTH - LOG2_MIN_TU_SIZE ) 						+
-			(X11_ADDR_WDTH - LOG2_MIN_TU_SIZE ) 						+
-			(X11_ADDR_WDTH - LOG2_MIN_TU_SIZE ) 						+
-			(X11_ADDR_WDTH - LOG2_MIN_TU_SIZE ) 						+
-         (NTBS_SH_WDTH  )                                      +
 			(MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH )  						+
 			(MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH )  						+
 			(MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH )  						+
@@ -1074,13 +771,6 @@ output_fifo_rest_4k output_fifo_rest_block (
         .wr_en(op_conf_fifo_wr_en), 
         .rd_en(op_conf_fifo_rd_en), 
         .d_in({
-				res_present,
-				bi_pred_block_cache,
-				x0_tu_end_in_min_tus,
-				y0_tu_end_in_min_tus,
-				xT_in_min_tus,
-				yT_in_min_tus,
-            ntbs_sh,
 				luma_ref_start_x   ,
 				luma_ref_start_y   ,
 				chma_ref_start_x   ,
@@ -1101,13 +791,6 @@ output_fifo_rest_4k output_fifo_rest_block (
 				d_block_y_end_chma
 			}),
         .d_out({
-				res_present_out,
-				bi_pred_block_cache_out,
-				x0_tu_end_in_min_tus_out,
-				y0_tu_end_in_min_tus_out,
-				xT_in_min_tus_out,
-				yT_in_min_tus_out,
-            ntbs_sh_out,
 				luma_ref_start_x_out   ,
 				luma_ref_start_y_out   ,
 				chma_ref_start_x_out   ,
@@ -1177,24 +860,19 @@ output_fifo_rest_4k output_fifo_rest_block (
         .d_out({
 				cb_ref_block_out,
 				cr_ref_block_out
-			})
+			}),
+        .empty(),
+        .program_full(),
+        .almost_full(),
+        .full()
         );	
         
      
 	assign output_fifo_program_full = output_fifo_almost_full_only | output_fifo_full | op_luma_program_full;		  
-`endif
-
 
 	
-`ifdef CACHE_FIFOS
-	`ifdef CACHE_FIFOS_4K
-		assign cache_full_idle = (hit_fifo_data_count==0) & (mis_fifo_data_count==0) & (output_fifo_data_count==0) & !block_ready_reg_d  & !data_read_stage_valid & !hit_elem_fifo_wr_en_d & !miss_elem_fifo_wr_en_d & !hit_elem_fifo_wr_en_2d & !miss_elem_fifo_wr_en_2d & !hit_elem_fifo_rd_en & !hit_elem_fifo_rd_en_d & !hit_elem_fifo_rd_en_2d & !miss_elem_fifo_rd_en & !miss_elem_fifo_rd_en_d & !miss_elem_fifo_rd_en_2d & (~set_input_stage_valid);
-	`else
-		assign cache_full_idle = (hit_fifo_data_count==0) & (mis_fifo_data_count==0) & output_fifo_empty           & !block_ready_reg_d  & !data_read_stage_valid & !hit_elem_fifo_wr_en_d & !miss_elem_fifo_wr_en_d & !hit_elem_fifo_wr_en_2d & !miss_elem_fifo_wr_en_2d & !hit_elem_fifo_rd_en & !hit_elem_fifo_rd_en_d & !hit_elem_fifo_rd_en_2d & !miss_elem_fifo_rd_en & !miss_elem_fifo_rd_en_d & !miss_elem_fifo_rd_en_2d & (~set_input_stage_valid);
-	`endif
-`else
 	assign cache_full_idle = hit_elem_fifo_empty & miss_elem_fifo_empty & output_fifo_empty                       & !block_ready_reg_d  & !data_read_stage_valid & !hit_elem_fifo_wr_en_d & !miss_elem_fifo_wr_en_d & !hit_elem_fifo_wr_en_2d & !miss_elem_fifo_wr_en_2d & !hit_elem_fifo_rd_en & !hit_elem_fifo_rd_en_d & !hit_elem_fifo_rd_en_2d & !miss_elem_fifo_rd_en & !miss_elem_fifo_rd_en_d & !miss_elem_fifo_rd_en_2d & (~set_input_stage_valid);
-`endif
+
    assign                  ref_pix_axi_ar_burst  = `AX_BURST_INC;
    assign                  ref_pix_axi_ar_prot   = `AX_PROT_DATA;    
     always@(posedge clk) begin
@@ -1254,15 +932,9 @@ cache_conf_stage cache_config_update_block
    
    .pic_width                  (pic_width                  ),
    .pic_height                 (pic_height                 ),
-   
-   .xT_in_min_tus              (xT_in_min_tus              ),
-   .yT_in_min_tus              (yT_in_min_tus              ),
+
    .ref_idx_in                 (ref_idx_in                 ),
-   .ntbs_sh                    (ntbs_sh                    ),
-   .res_present                (res_present                ),
-   .bi_pred_block_cache        (bi_pred_block_cache        ),
-   .x0_tu_end_in_min_tus       (x0_tu_end_in_min_tus       ),
-   .y0_tu_end_in_min_tus       (y0_tu_end_in_min_tus       ),
+
    .luma_ref_start_x           (luma_ref_start_x           ),
    .luma_ref_start_y           (luma_ref_start_y           ),
    .chma_ref_start_x           (chma_ref_start_x           ),
@@ -1274,14 +946,9 @@ cache_conf_stage cache_config_update_block
    .d_frac_x_out               (d_frac_x_out               ),
    .d_frac_y_out               (d_frac_y_out               ),
    
-   .xT_in_min_tus_in           (xT_in_min_tus_in           ),
-   .yT_in_min_tus_in           (yT_in_min_tus_in           ),
+
    .ref_idx_in_in              (ref_idx_in_in              ),
-   .ntbs_sh_in                 (ntbs_sh_in                 ),
-   .res_present_in             (res_present_in             ),
-   .bi_pred_block_cache_in     (bi_pred_block_cache_in     ),
-   .x0_tu_end_in_min_tus_in    (x0_tu_end_in_min_tus_in    ),
-   .y0_tu_end_in_min_tus_in    (y0_tu_end_in_min_tus_in    ),
+
    .luma_ref_start_x_in        (luma_ref_start_x_in        ),
    .luma_ref_start_y_in        (luma_ref_start_y_in        ),
    .chma_ref_start_x_in        (chma_ref_start_x_in        ),

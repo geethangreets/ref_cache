@@ -42,23 +42,19 @@ module cache_set_input
     curr_y
 );
 
-    `include "../sim/cache_configs_def.v"
     `include "../sim/pred_def.v"
     `include "../sim/inter_axi_def.v"
+    `include "../sim/cache_configs_def.v"
 
 //---------------------------------------------------------------------------------------------------------------------
 // localparam definitions
 //---------------------------------------------------------------------------------------------------------------------
 
-		localparam							    STATE_IDLE	 			= 0;
-		localparam 							    STATE_ACTIVE 			= 1;
+	localparam						STATE_IDLE	 			= 0;
+	localparam 						STATE_ACTIVE 			= 1;
     parameter                           NUM_X_BANKS         = 1;
     parameter                           NUM_Y_BANKS         = 1;
-      
-    parameter                           LUMA_DIM_WDTH		    	= 4;        // out block dimension  max 11
-    // parameter                           LUMA_DIM_ADDR_WDTH          = 7;        //max 121
-    parameter                           CHMA_DIM_WDTH               = 3;        // max 5 (2+3) / (4+3)
-    parameter                           CHMA_DIM_HIGT               = 3;        // max 5 (2+3) / (4+3)
+
 //---------------------------------------------------------------------------------------------------------------------
 // I/O signals
 //---------------------------------------------------------------------------------------------------------------------

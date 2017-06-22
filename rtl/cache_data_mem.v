@@ -10,8 +10,8 @@ module cache_data_mem
 
 );
 
-		`include "../sim/cache_configs_def.v"
 		`include "../sim/pred_def.v"
+		`include "../sim/cache_configs_def.v"
 		//---------------------------------------------------------------------------------------------------------------------
 		// parameter definitions
 		//---------------------------------------------------------------------------------------------------------------------
@@ -29,10 +29,10 @@ module cache_data_mem
 		
 
 	input                                                  	clk;
-	input	[PIXEL_BITS*CACHE_LINE_WDTH-1:0]           		   w_data_in;
-	input	[SET_ADDR_WDTH+C_N_WAY-C_LG_BANKS-1:0]				   addr_in;			
-	input													               w_en_in;
-	output  [PIXEL_BITS*CACHE_LINE_WDTH-1:0]	     		      r_data_out;
+	input	[PIXEL_BITS*CACHE_LINE_WDTH-1:0]           		w_data_in;
+	input	[SET_ADDR_WDTH+C_N_WAY-C_LG_BANKS-1:0]			addr_in;			
+	input													w_en_in;
+	output  [PIXEL_BITS*CACHE_LINE_WDTH-1:0]	     	    r_data_out;
 	
 	
 	//---------------------------------------------------------------------------------------------------------------------

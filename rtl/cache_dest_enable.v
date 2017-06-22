@@ -11,9 +11,9 @@ module cache_dest_enable
 );
 
    
-    `include "../sim/cache_configs_def.v"
     `include "../sim/pred_def.v"
     `include "../sim/inter_axi_def.v"
+    `include "../sim/cache_configs_def.v"
     
    parameter   NOW_X_WDTH = X_ADDR_WDTH - C_L_H_SIZE;
    parameter   NOW_Y_WDTH = Y_ADDR_WDTH - C_L_V_SIZE;
