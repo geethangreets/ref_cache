@@ -84,7 +84,7 @@ module inter_cache_pipe_hit_pipe
     // parameter definitions
     //---------------------------------------------------------------------------------------------------------------------
 
-    parameter                           CACHE_LINE_LUMA_OFFSET      = 0;
+    parameter                           CACHE_LINE_LUMA_OFFSET    = 0;
     parameter                           CACHE_LINE_CB_OFFSET      = CACHE_LINE_WDTH * BIT_DEPTH;
     parameter                           CACHE_LINE_CR_OFFSET      = CACHE_LINE_CB_OFFSET + ((CACHE_LINE_WDTH * BIT_DEPTH)>> ((C_SUB_HEIGHT-1)+(C_SUB_WIDTH-1)));
 
@@ -118,7 +118,7 @@ module inter_cache_pipe_hit_pipe
     // inter prediction filter interface            
    input                                           valid_in; 
    output								           cache_valid_out;   // assuming cache_block_ready is single cylce 
-   output										            cache_idle_out;
+   output										   cache_idle_out;
    input                                           filer_idle_in;
    output                                          cache_full_idle;
     
@@ -282,7 +282,7 @@ module inter_cache_pipe_hit_pipe
     reg     [SET_ADDR_WDTH+C_N_WAY-1:0]             cache_w_addr;
     reg     [SET_ADDR_WDTH+C_N_WAY-1:0]             cache_r_addr;
     reg     [SET_ADDR_WDTH+C_N_WAY-1:0]             cache_addr;
-    wire    [PIXEL_BITS*CACHE_LINE_WDTH-1:0]        cache_rdata;
+    wire    [BIT_DEPTH*CACHE_LINE_WDTH-1:0]        cache_rdata;
     reg                                             cache_wr_en;
 
     wire     luma_dest_enable_reg;
@@ -370,18 +370,18 @@ module inter_cache_pipe_hit_pipe
     wire [BIT_DEPTH-1:0] cache_w_data_arr_cb [CACHE_LINE_WDTH/(C_SUB_WIDTH*C_SUB_HEIGHT)-1:0];
     wire [BIT_DEPTH-1:0] cache_w_data_arr_cr [CACHE_LINE_WDTH/(C_SUB_WIDTH*C_SUB_HEIGHT)-1:0];
 	
-    wire [BIT_DEPTH-1:0] cache_rdata_arr    [(PIXEL_BITS*CACHE_LINE_WDTH/BIT_DEPTH)-1:0];
+    wire [BIT_DEPTH-1:0] cache_rdata_arr    [(BIT_DEPTH*CACHE_LINE_WDTH/BIT_DEPTH)-1:0];
     wire [BIT_DEPTH-1:0] cache_rdata_arr_luma [CACHE_LINE_WDTH-1:0];
     wire [BIT_DEPTH-1:0] cache_rdata_arr_cb [CACHE_LINE_WDTH/(C_SUB_WIDTH*C_SUB_HEIGHT)-1:0];
     wire [BIT_DEPTH-1:0] cache_rdata_arr_cr [CACHE_LINE_WDTH/(C_SUB_WIDTH*C_SUB_HEIGHT)-1:0];
 
 	
-	wire		[CACHE_LINE_WDTH*PIXEL_BITS -1:0]		    cache_w_port;
-	reg 		[CACHE_LINE_WDTH*PIXEL_BITS -1:0]		    cache_w_port_d;
-	reg 		[(CACHE_LINE_WDTH*PIXEL_BITS + (((CACHE_LINE_WDTH*PIXEL_BITS-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*PIXEL_BITS-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]		    cache_w_port_old1_reg;
-	reg 		[(CACHE_LINE_WDTH*PIXEL_BITS + (((CACHE_LINE_WDTH*PIXEL_BITS-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*PIXEL_BITS-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]		    cache_w_port_old2_reg;
-	reg 		[(CACHE_LINE_WDTH*PIXEL_BITS + (((CACHE_LINE_WDTH*PIXEL_BITS-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*PIXEL_BITS-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]		    cache_w_port_old3_reg;
-	reg 		[(CACHE_LINE_WDTH*PIXEL_BITS + (((CACHE_LINE_WDTH*PIXEL_BITS-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*PIXEL_BITS-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]		    cache_w_port_old4_reg;
+	wire		[CACHE_LINE_WDTH*BIT_DEPTH -1:0]		    cache_w_port;
+	reg 		[CACHE_LINE_WDTH*BIT_DEPTH -1:0]		    cache_w_port_d;
+	reg 		[(CACHE_LINE_WDTH*BIT_DEPTH + (((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]		    cache_w_port_old1_reg;
+	reg 		[(CACHE_LINE_WDTH*BIT_DEPTH + (((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]		    cache_w_port_old2_reg;
+	reg 		[(CACHE_LINE_WDTH*BIT_DEPTH + (((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]		    cache_w_port_old3_reg;
+	reg 		[(CACHE_LINE_WDTH*BIT_DEPTH + (((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]		    cache_w_port_old4_reg;
 
 	wire miss_elem_fifo_empty;
 	wire  hit_elem_fifo_empty;
@@ -512,8 +512,6 @@ module inter_cache_pipe_hit_pipe
 
 
    wire [YY_WIDTH-1:0] yy_pixels_8x8;
-   wire [CH_WIDTH-1:0] cb_pixels_8x8;
-   wire [CH_WIDTH-1:0] cr_pixels_8x8;
    parameter Y_DIV_WIDTH = YY_WIDTH/CL_AXI_DIV_FAC;
    parameter CB_DIV_WIDTH = CH_WIDTH/CL_AXI_DIV_FAC;
 		
@@ -522,11 +520,11 @@ module inter_cache_pipe_hit_pipe
 	assign cache_valid_out = !output_fifo_empty & filer_idle_in;
 	assign block_ready_internal = block_ready_reg ;
    
-   assign cache_w_port = {cr_pixels_8x8,cb_pixels_8x8,yy_pixels_8x8}; 
+   assign cache_w_port = {yy_pixels_8x8}; 
 
 		
    assign                  ref_pix_axi_ar_size   = `AX_SIZE_64;
-   assign                  ref_pix_axi_ar_len    = (CACHE_LINE_WDTH*PIXEL_BITS-1)/AXI_CACHE_DATA_WDTH;
+   assign                  ref_pix_axi_ar_len    = (CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH;
 
 
 
@@ -567,7 +565,7 @@ module inter_cache_pipe_hit_pipe
     // .r_addr_in(cache_r_addr), 
     .addr_in(cache_addr), 
     .r_data_out(cache_rdata), 
-    .w_data_in(cache_w_port[CACHE_LINE_WDTH*PIXEL_BITS -1:0]), 
+    .w_data_in(cache_w_port[CACHE_LINE_WDTH*BIT_DEPTH -1:0]), 
     .w_en_in(cache_wr_en)
     );
 
@@ -926,7 +924,7 @@ cache_conf_stage cache_config_update_block
    .clk                        (clk                        ),
    .reset                      (reset                      ),
    
-   .valid_in                   (valid_in                   ),
+   .valid_in                   (valid_in & cache_idle_out                  ),
    .tag_compare_stage_ready    (tag_compare_stage_ready    ),
    .op_conf_fifo_wr_en         (op_conf_fifo_wr_en         ),
    
@@ -990,7 +988,7 @@ cache_set_input cache_set_input_block
    .clk                       (clk                       ) ,
    .reset                     (reset                     ) ,
    
-   .valid_in                  (valid_in                  ) ,
+   .valid_in                  (valid_in &   cache_idle_out               ) ,
    .set_input_stage_valid     (set_input_stage_valid     ) ,
    .tag_compare_stage_ready   (tag_compare_stage_ready   ) ,
    .set_input_ready           (set_input_ready           ) ,
@@ -1445,10 +1443,10 @@ end
 
 always@(posedge clk) begin
       if(ref_pix_axi_r_valid & ref_pix_axi_r_ready) begin
-               cache_w_port_old4_reg	<= cache_w_port_old3_reg[(CACHE_LINE_WDTH*PIXEL_BITS + (((CACHE_LINE_WDTH*PIXEL_BITS-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*PIXEL_BITS-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]	    ;
-               cache_w_port_old3_reg	<= cache_w_port_old2_reg[(CACHE_LINE_WDTH*PIXEL_BITS + (((CACHE_LINE_WDTH*PIXEL_BITS-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*PIXEL_BITS-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]	    ;
-               cache_w_port_old2_reg	<= cache_w_port_old1_reg[(CACHE_LINE_WDTH*PIXEL_BITS + (((CACHE_LINE_WDTH*PIXEL_BITS-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*PIXEL_BITS-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]	    ;
-               cache_w_port_old1_reg	<= ref_pix_axi_r_data   [(CACHE_LINE_WDTH*PIXEL_BITS + (((CACHE_LINE_WDTH*PIXEL_BITS-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*PIXEL_BITS-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]	    ;
+               cache_w_port_old4_reg	<= cache_w_port_old3_reg[(CACHE_LINE_WDTH*BIT_DEPTH + (((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]	    ;
+               cache_w_port_old3_reg	<= cache_w_port_old2_reg[(CACHE_LINE_WDTH*BIT_DEPTH + (((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]	    ;
+               cache_w_port_old2_reg	<= cache_w_port_old1_reg[(CACHE_LINE_WDTH*BIT_DEPTH + (((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]	    ;
+               cache_w_port_old1_reg	<= ref_pix_axi_r_data   [(CACHE_LINE_WDTH*BIT_DEPTH + (((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]	    ;
       end
 end
 
@@ -1477,21 +1475,21 @@ end
 		for(ii=0;ii < ((CACHE_LINE_WDTH)); ii=ii+1) begin
             assign    cache_w_data_arr_luma[ii] = cache_w_port_d[(CACHE_LINE_LUMA_OFFSET)+BIT_DEPTH*(ii+1)-1:(CACHE_LINE_LUMA_OFFSET)+BIT_DEPTH*ii];
       end
-		for(ii=0;ii < ((CACHE_LINE_WDTH/(C_SUB_WIDTH*C_SUB_HEIGHT))); ii=ii+1) begin
-            assign    cache_w_data_arr_cb[ii] = cache_w_port_d[(CACHE_LINE_CB_OFFSET)+BIT_DEPTH*(ii+1)-1:(CACHE_LINE_CB_OFFSET)+BIT_DEPTH*ii];
-            assign    cache_w_data_arr_cr[ii] = cache_w_port_d[(CACHE_LINE_CR_OFFSET)+BIT_DEPTH*(ii+1)-1:(CACHE_LINE_CR_OFFSET)+BIT_DEPTH*ii];
-      end
+		// for(ii=0;ii < ((CACHE_LINE_WDTH/(C_SUB_WIDTH*C_SUB_HEIGHT))); ii=ii+1) begin
+            // assign    cache_w_data_arr_cb[ii] = cache_w_port_d[(CACHE_LINE_CB_OFFSET)+BIT_DEPTH*(ii+1)-1:(CACHE_LINE_CB_OFFSET)+BIT_DEPTH*ii];
+            // assign    cache_w_data_arr_cr[ii] = cache_w_port_d[(CACHE_LINE_CR_OFFSET)+BIT_DEPTH*(ii+1)-1:(CACHE_LINE_CR_OFFSET)+BIT_DEPTH*ii];
+      // end
 		
-      for(ii=0; ii<(PIXEL_BITS*CACHE_LINE_WDTH/BIT_DEPTH) ; ii=ii+1) begin
+      for(ii=0; ii<(BIT_DEPTH*CACHE_LINE_WDTH/BIT_DEPTH) ; ii=ii+1) begin
             assign    cache_rdata_arr[ii] = cache_rdata[BIT_DEPTH*(ii+1)-1:BIT_DEPTH*ii];
       end
 		for(ii=0;ii < ((CACHE_LINE_WDTH)); ii=ii+1) begin
             assign    cache_rdata_arr_luma[ii] = cache_rdata[(CACHE_LINE_LUMA_OFFSET)+BIT_DEPTH*(ii+1)-1:(CACHE_LINE_LUMA_OFFSET)+BIT_DEPTH*ii];
       end
-		for(ii=0;ii < ((CACHE_LINE_WDTH/(C_SUB_WIDTH*C_SUB_HEIGHT))); ii=ii+1) begin
-            assign    cache_rdata_arr_cb[ii] = cache_rdata[(CACHE_LINE_CB_OFFSET)+BIT_DEPTH*(ii+1)-1:(CACHE_LINE_CB_OFFSET)+BIT_DEPTH*ii];
-            assign    cache_rdata_arr_cr[ii] = cache_rdata[(CACHE_LINE_CR_OFFSET)+BIT_DEPTH*(ii+1)-1:(CACHE_LINE_CR_OFFSET)+BIT_DEPTH*ii];
-        end
+		// for(ii=0;ii < ((CACHE_LINE_WDTH/(C_SUB_WIDTH*C_SUB_HEIGHT))); ii=ii+1) begin
+            // assign    cache_rdata_arr_cb[ii] = cache_rdata[(CACHE_LINE_CB_OFFSET)+BIT_DEPTH*(ii+1)-1:(CACHE_LINE_CB_OFFSET)+BIT_DEPTH*ii];
+            // assign    cache_rdata_arr_cr[ii] = cache_rdata[(CACHE_LINE_CR_OFFSET)+BIT_DEPTH*(ii+1)-1:(CACHE_LINE_CR_OFFSET)+BIT_DEPTH*ii];
+        // end
 
 		
     endgenerate
@@ -1499,47 +1497,20 @@ end
 
 	generate  
 		if(C_SIZE == 13) begin
-         if(CL_AXI_DIV_FAC == 5) begin
-            assign {cr_pixels_8x8[CB_DIV_WIDTH*1-1:CB_DIV_WIDTH*0]    ,cb_pixels_8x8[CB_DIV_WIDTH*1+1-1:CB_DIV_WIDTH*0],  yy_pixels_8x8[Y_DIV_WIDTH*1+1-1:Y_DIV_WIDTH*0]}    = cache_w_port_old4_reg;
-            assign {cr_pixels_8x8[CB_DIV_WIDTH*2-1:CB_DIV_WIDTH*1]    ,cb_pixels_8x8[CB_DIV_WIDTH*2+2-1:CB_DIV_WIDTH*1+1],yy_pixels_8x8[Y_DIV_WIDTH*2+2-1:Y_DIV_WIDTH*1+1]}  = cache_w_port_old3_reg;
-            assign {cr_pixels_8x8[CB_DIV_WIDTH*3-1:CB_DIV_WIDTH*2]    ,cb_pixels_8x8[CB_DIV_WIDTH*3+3-1:CB_DIV_WIDTH*2+2],yy_pixels_8x8[Y_DIV_WIDTH*3+3-1:Y_DIV_WIDTH*2+2]}  = cache_w_port_old2_reg;
-            assign {cr_pixels_8x8[CB_DIV_WIDTH*4+1-1:CB_DIV_WIDTH*3]  ,cb_pixels_8x8[CB_DIV_WIDTH*4+3-1:CB_DIV_WIDTH*3+3],yy_pixels_8x8[Y_DIV_WIDTH*4+3-1:Y_DIV_WIDTH*3+3]}  = cache_w_port_old1_reg;
-            assign {cr_pixels_8x8[CB_DIV_WIDTH*5+3-1:CB_DIV_WIDTH*4+1],cb_pixels_8x8[CB_DIV_WIDTH*5+3-1:CB_DIV_WIDTH*4+3],yy_pixels_8x8[Y_DIV_WIDTH*5+3-1:Y_DIV_WIDTH*4+3]}  = ref_pix_axi_r_data;          
-         end
-         else if(CL_AXI_DIV_FAC == 4) begin
-            assign {cr_pixels_8x8[CB_DIV_WIDTH*1-1:CB_DIV_WIDTH*0],cb_pixels_8x8[CB_DIV_WIDTH*1-1:CB_DIV_WIDTH*0],yy_pixels_8x8[Y_DIV_WIDTH*1-1:Y_DIV_WIDTH*0]} = cache_w_port_old3_reg;
-            assign {cr_pixels_8x8[CB_DIV_WIDTH*2-1:CB_DIV_WIDTH*1],cb_pixels_8x8[CB_DIV_WIDTH*2-1:CB_DIV_WIDTH*1],yy_pixels_8x8[Y_DIV_WIDTH*2-1:Y_DIV_WIDTH*1]} = cache_w_port_old2_reg;
-            assign {cr_pixels_8x8[CB_DIV_WIDTH*3-1:CB_DIV_WIDTH*2],cb_pixels_8x8[CB_DIV_WIDTH*3-1:CB_DIV_WIDTH*2],yy_pixels_8x8[Y_DIV_WIDTH*3-1:Y_DIV_WIDTH*2]} = cache_w_port_old1_reg;
-            assign {cr_pixels_8x8[CB_DIV_WIDTH*4-1:CB_DIV_WIDTH*3],cb_pixels_8x8[CB_DIV_WIDTH*4-1:CB_DIV_WIDTH*3],yy_pixels_8x8[Y_DIV_WIDTH*4-1:Y_DIV_WIDTH*3]} = ref_pix_axi_r_data;      
-         end 
-         else if(CL_AXI_DIV_FAC==3) begin
-            if(BIT_DEPTH == 8 ) begin
-               assign {cr_pixels_8x8[CB_DIV_WIDTH*1-1:CB_DIV_WIDTH*0],cb_pixels_8x8[CB_DIV_WIDTH*1-1:CB_DIV_WIDTH*0],yy_pixels_8x8[Y_DIV_WIDTH*1+2-1:Y_DIV_WIDTH*0]}= cache_w_port_old2_reg;
-               assign {cr_pixels_8x8[CB_DIV_WIDTH*2-1:CB_DIV_WIDTH*1],cb_pixels_8x8[CB_DIV_WIDTH*2+2-1:CB_DIV_WIDTH*1],yy_pixels_8x8[Y_DIV_WIDTH*2+2-1:Y_DIV_WIDTH*1+2]}= cache_w_port_old1_reg;
-               assign {cr_pixels_8x8[CB_DIV_WIDTH*3+2-1:CB_DIV_WIDTH*2],cb_pixels_8x8[CB_DIV_WIDTH*3+2-1:CB_DIV_WIDTH*2+2],yy_pixels_8x8[Y_DIV_WIDTH*3+2-1:Y_DIV_WIDTH*2+2]} = ref_pix_axi_r_data;
-            end
-            else if (BIT_DEPTH == 10) begin
-               assign {cr_pixels_8x8[CB_DIV_WIDTH*1-1:CB_DIV_WIDTH*0],cb_pixels_8x8[CB_DIV_WIDTH*1-1:CB_DIV_WIDTH*0],yy_pixels_8x8[Y_DIV_WIDTH*1+1-1:Y_DIV_WIDTH*0]}= cache_w_port_old2_reg;
-               assign {cr_pixels_8x8[CB_DIV_WIDTH*2-1:CB_DIV_WIDTH*1],cb_pixels_8x8[CB_DIV_WIDTH*2+2-1:CB_DIV_WIDTH*1],yy_pixels_8x8[Y_DIV_WIDTH*2+1-1:Y_DIV_WIDTH*1+1]}= cache_w_port_old1_reg;
-               assign {cr_pixels_8x8[CB_DIV_WIDTH*3+2-1:CB_DIV_WIDTH*2],cb_pixels_8x8[CB_DIV_WIDTH*3+2-1:CB_DIV_WIDTH*2+2],yy_pixels_8x8[Y_DIV_WIDTH*3+1-1:Y_DIV_WIDTH*2+1]} = ref_pix_axi_r_data;
-            end
-            else begin // 420 12bit
-               assign {cr_pixels_8x8[CB_DIV_WIDTH*1-1:CB_DIV_WIDTH*0],cb_pixels_8x8[CB_DIV_WIDTH*1-1:CB_DIV_WIDTH*0],yy_pixels_8x8[Y_DIV_WIDTH*1-1:Y_DIV_WIDTH*0]}= cache_w_port_old2_reg;
-               assign {cr_pixels_8x8[CB_DIV_WIDTH*2-1:CB_DIV_WIDTH*1],cb_pixels_8x8[CB_DIV_WIDTH*2-1:CB_DIV_WIDTH*1],yy_pixels_8x8[Y_DIV_WIDTH*2-1:Y_DIV_WIDTH*1]}= cache_w_port_old1_reg;
-               assign {cr_pixels_8x8[CB_DIV_WIDTH*3-1:CB_DIV_WIDTH*2],cb_pixels_8x8[CB_DIV_WIDTH*3-1:CB_DIV_WIDTH*2],yy_pixels_8x8[Y_DIV_WIDTH*3-1:Y_DIV_WIDTH*2]}= ref_pix_axi_r_data;
-            end
+          if(CL_AXI_DIV_FAC==2) begin
+            assign  {yy_pixels_8x8[Y_DIV_WIDTH*1-1:Y_DIV_WIDTH*0]} = cache_w_port_old1_reg;
+            assign  {yy_pixels_8x8[Y_DIV_WIDTH*2-1:Y_DIV_WIDTH*1]} = ref_pix_axi_r_data;  
          end
          else begin
-            assign  {cr_pixels_8x8[CB_DIV_WIDTH*1-1:CB_DIV_WIDTH*0],cb_pixels_8x8[CB_DIV_WIDTH*1-1:CB_DIV_WIDTH*0],yy_pixels_8x8[Y_DIV_WIDTH*1-1:Y_DIV_WIDTH*0]} = cache_w_port_old1_reg;
-            assign  {cr_pixels_8x8[CB_DIV_WIDTH*2-1:CB_DIV_WIDTH*1],cb_pixels_8x8[CB_DIV_WIDTH*2-1:CB_DIV_WIDTH*1],yy_pixels_8x8[Y_DIV_WIDTH*2-1:Y_DIV_WIDTH*1]} = ref_pix_axi_r_data;     
+            assign  {yy_pixels_8x8[Y_DIV_WIDTH*1-1:Y_DIV_WIDTH*0]} = ref_pix_axi_r_data;     
          end
-			// assign cache_w_port = {ref_pix_axi_r_data[CACHE_LINE_WDTH*PIXEL_BITS -1:AXI_CACHE_DATA_WDTH/2],ref_pix_axi_r_data[CACHE_LINE_WDTH*PIXEL_BITS/2 -1:0]};
+			// assign cache_w_port = {ref_pix_axi_r_data[CACHE_LINE_WDTH*BIT_DEPTH -1:AXI_CACHE_DATA_WDTH/2],ref_pix_axi_r_data[CACHE_LINE_WDTH*BIT_DEPTH/2 -1:0]};
 			
 
 		end
 		else begin
-			// assign cache_w_port = ref_pix_axi_r_data[CACHE_LINE_WDTH*PIXEL_BITS -1:0];
-         assign {cr_pixels_8x8[CB_DIV_WIDTH*1-1:CB_DIV_WIDTH*0],cb_pixels_8x8[CB_DIV_WIDTH*1-1:CB_DIV_WIDTH*0],yy_pixels_8x8[Y_DIV_WIDTH*1-1:Y_DIV_WIDTH*0]} = ref_pix_axi_r_data;	
+			// assign cache_w_port = ref_pix_axi_r_data[CACHE_LINE_WDTH*BIT_DEPTH -1:0];
+         assign {yy_pixels_8x8[Y_DIV_WIDTH*1-1:Y_DIV_WIDTH*0]} = ref_pix_axi_r_data;	
 		end
 	endgenerate
 

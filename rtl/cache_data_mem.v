@@ -29,18 +29,18 @@ module cache_data_mem
 		
 
 	input                                                  	clk;
-	input	[PIXEL_BITS*CACHE_LINE_WDTH-1:0]           		w_data_in;
+	input	[BIT_DEPTH*CACHE_LINE_WDTH-1:0]           		w_data_in;
 	input	[SET_ADDR_WDTH+C_N_WAY-C_LG_BANKS-1:0]			addr_in;			
 	input													w_en_in;
-	output  [PIXEL_BITS*CACHE_LINE_WDTH-1:0]	     	    r_data_out;
+	output  [BIT_DEPTH*CACHE_LINE_WDTH-1:0]	     	        r_data_out;
 	
 	
 	//---------------------------------------------------------------------------------------------------------------------
 		// Internal wires and registers
 		//---------------------------------------------------------------------------------------------------------------------
-		reg     [PIXEL_BITS*CACHE_LINE_WDTH-1:0]                                r_data_out_reg;
-//`ifdef simulate
-		reg     [PIXEL_BITS*(CACHE_LINE_WDTH)-1:0]      				        mem [NUM_CACHE_LINES-1:0];      // 48 bytes in cache line
+		reg     [BIT_DEPTH*CACHE_LINE_WDTH-1:0]                                 r_data_out_reg;
+//`ifdef simulate   
+		reg     [BIT_DEPTH*(CACHE_LINE_WDTH)-1:0]      				            mem [NUM_CACHE_LINES-1:0];      // 48 bytes in cache line
 		
 
 	

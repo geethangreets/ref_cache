@@ -215,102 +215,104 @@ always@(*) begin :next_curr_x_y
 end
 
 always@(*) begin
-   nxt_state_set_input = state_set_input;
-   set_input_ready = 0;
-   case(state_set_input)
-      STATE_IDLE: begin
-         if(valid_in) begin
-            nxt_state_set_input = STATE_ACTIVE;
-         end
-         set_input_ready = 1;
-      end
-      STATE_ACTIVE: begin
-         if(tag_compare_stage_ready) begin
-            if(curr_x == delta_x && curr_y == delta_y) begin
-               nxt_state_set_input = STATE_IDLE;
+    nxt_state_set_input = state_set_input;
+    set_input_ready = 0;
+    case(state_set_input)
+        STATE_IDLE: begin
+            if(~( ~tag_compare_stage_ready)) begin
+                if(valid_in) begin
+                    nxt_state_set_input = STATE_ACTIVE;
+                end
+                set_input_ready = 1;
             end
-            else begin
-               if(next_curr_x == delta_x && next_curr_y == delta_y) begin
-                  nxt_state_set_input = STATE_IDLE;
-               end            
+        end
+        STATE_ACTIVE: begin
+            if(tag_compare_stage_ready) begin
+                if(curr_x == delta_x && curr_y == delta_y) begin
+                    nxt_state_set_input = STATE_IDLE;
+                end
+                else begin
+                    if(next_curr_x == delta_x && next_curr_y == delta_y) begin
+                        nxt_state_set_input = STATE_IDLE;
+                    end            
+                end
             end
-         end
-      end
-   endcase
+        end
+    endcase
 end
 
 always@(posedge clk) begin
-   if(reset) begin
-      state_set_input <= STATE_IDLE;
-   end
-   else begin
-      state_set_input <= nxt_state_set_input;
-   end
+    if(reset) begin
+        state_set_input <= STATE_IDLE;
+    end
+    else begin
+        state_set_input <= nxt_state_set_input;
+    end
 end
 	
 always@(posedge clk) begin : SET_INPUT_STAGE
 	if(reset) begin
 		set_input_stage_valid <= 0;
 		curr_x <= 0;
-      curr_y <= 0;
+        curr_y <= 0;
 	end
 	else begin
-			case(state_set_input)
-				STATE_IDLE: begin
-               if(~( ~tag_compare_stage_ready)) begin
-                  if(valid_in) begin
-                     set_input_stage_valid <= 1;
-                     curr_x <= 0;
-                     curr_y <= 0;
-                     curr_x_luma <= 0;
-                     curr_y_luma <= 0;
-                     curr_x_chma <= 0;
-                     curr_y_chma <= 0;
-                     cur_xy_changed_luma <= 1;
-                     cur_xy_changed_chma <= 1;
-                  end
-                  else begin
-                     set_input_stage_valid <= 0;
-                  end
-               end
-				end
-				STATE_ACTIVE: begin
-               if(tag_compare_stage_ready) begin
-                  if(curr_x == delta_x && curr_y == delta_y) begin
-                     set_input_stage_valid <= 0;
-                     if(delta_x == 0 && delta_y ==0) begin
-                     end
-                     else begin
-                        $display("cache current x,y state trn. not next_x,y");
-                        $stop;
-                     end
-                  end	
-                  else begin
-                     set_input_stage_valid <= 1; 
-                     curr_x <= next_curr_x;
-                     curr_y <= next_curr_y;
-                     if(luma_dest_enable_wire_next) begin
-                        curr_x_luma <= next_curr_x_luma;
-                        curr_y_luma <= next_curr_y_luma;
+        case(state_set_input)
+            STATE_IDLE: begin
+                if(~( ~tag_compare_stage_ready)) begin
+                    if(valid_in) begin
+                        set_input_stage_valid <= 1;
+                        curr_x <= 0;
+                        curr_y <= 0;
+                        curr_x_luma <= 0;
+                        curr_y_luma <= 0;
+                        curr_x_chma <= 0;
+                        curr_y_chma <= 0;
                         cur_xy_changed_luma <= 1;
-                     end
-                     else begin
-                        cur_xy_changed_luma <= 0;
-                     end
-                     if(chma_dest_enable_wire_next) begin
-                        curr_x_chma <= next_curr_x_chma;
-                        curr_y_chma <= next_curr_y_chma;
-                        cur_xy_changed_chma <= 1;  
-                     end
-                     else begin
-                        cur_xy_changed_chma <= 0;
-                     end		
-                                
-                  end
-               end
-				end
+                        cur_xy_changed_chma <= 1;
+                    end
+                    else begin
+                        set_input_stage_valid <= 0;
+                    end
+                end
+            end
+            STATE_ACTIVE: begin
+                if(tag_compare_stage_ready) begin
+                    if(curr_x == delta_x && curr_y == delta_y) begin
+                        set_input_stage_valid <= 0;
+                        if(delta_x == 0 && delta_y ==0) begin
+                        end
+                        else begin
+                            $display("cache current x,y state trn. not next_x,y");
+                            $stop;
+                        end
+                    end	
+                    else begin
+                        set_input_stage_valid <= 1; 
+                        curr_x <= next_curr_x;
+                        curr_y <= next_curr_y;
+                        if(luma_dest_enable_wire_next) begin
+                            curr_x_luma <= next_curr_x_luma;
+                            curr_y_luma <= next_curr_y_luma;
+                            cur_xy_changed_luma <= 1;
+                        end
+                        else begin
+                            cur_xy_changed_luma <= 0;
+                        end
+                        if(chma_dest_enable_wire_next) begin
+                            curr_x_chma <= next_curr_x_chma;
+                            curr_y_chma <= next_curr_y_chma;
+                            cur_xy_changed_chma <= 1;  
+                        end
+                        else begin
+                            cur_xy_changed_chma <= 0;
+                        end		
+                            
+                    end
+                end
+            end
 
-			endcase
+        endcase
 	end
 end
 

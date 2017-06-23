@@ -83,8 +83,9 @@ module cache_tb();
     logic 						                               ref_pix_axi_r_last;
     logic 						                               ref_pix_axi_r_valid;
     logic 							                           ref_pix_axi_r_ready;
-        
-
+            
+    logic [32-1:0]                                                     file_rdata;
+    
     initial begin
         reset =1;
         $timeformat(-9, 0, "ns", 6); // Format time output
@@ -103,18 +104,18 @@ inter_cache_pipe_hit_pipe cache_top
     .clk                               (clk)  ,
     .reset                             (reset)  ,
 
-	.ref_idx_in_in                     ()  ,      // default to zero (for current frame)
-    .valid_in                          ()  ,           // input valid
-    .cache_idle_out                    ()  ,         // 1 - cache is ready to accept new input
+	.ref_idx_in_in                     (0)  ,      // default to zero (for current frame)
+    .valid_in                          (valid_in)  ,           // input valid
+    .cache_idle_out                    (cache_idle_out)  ,         // 1 - cache is ready to accept new input
     
-    .luma_ref_start_x_in 	           ()  ,   // start x location of luma 
-    .luma_ref_start_y_in               ()  ,    // start y location of luma 
-    .chma_ref_start_x_in 	           ()  ,   // start x location of chroma 
-    .chma_ref_start_y_in 	           ()  ,   // start y location of chroma 
-    .luma_ref_width_x_in               ()  ,     //width of reference block in luma
-    .chma_ref_width_x_in               ()  ,     //width of reference block in chroma
-    .luma_ref_height_y_in              ()  ,     //height of reference block in luma
-    .chma_ref_height_y_in              ()  ,     //height of reference block in chroma
+    .luma_ref_start_x_in 	           (luma_ref_start_x_in)  ,   // start x location of luma 
+    .luma_ref_start_y_in               (luma_ref_start_y_in)  ,    // start y location of luma 
+    .chma_ref_start_x_in 	           (0)  ,   // start x location of chroma 
+    .chma_ref_start_y_in 	           (0)  ,   // start y location of chroma 
+    .luma_ref_width_x_in               (8)  ,     //width of reference block in luma
+    .chma_ref_width_x_in               (0)  ,     //width of reference block in chroma
+    .luma_ref_height_y_in              (8)  ,     //height of reference block in luma
+    .chma_ref_height_y_in              (0)  ,     //height of reference block in chroma
 
     .luma_ref_start_x_out              ()  ,  //block dimension output for reference
     .luma_ref_start_y_out              ()  ,   //block dimension output for reference
@@ -136,32 +137,32 @@ inter_cache_pipe_hit_pipe cache_top
     .block_y_end_chma                  ()  ,   // valid pixel ending location y direction in chroma output
 
 
-    .pic_width                         ()  ,
-    .pic_height                        ()  ,
-    .ch_frac_x                         ()  ,       //optional default to zero
-    .ch_frac_y                         ()  ,       //optional default to zero
+    .pic_width                         (1920)  ,
+    .pic_height                        (1080)  ,
+    .ch_frac_x                         (0)  ,       //optional default to zero
+    .ch_frac_y                         (0)  ,       //optional default to zero
     .ch_frac_x_out                     ()  ,      //optional 
     .ch_frac_y_out                     ()  ,      //optional
 
-    .filer_idle_in                     ()  ,      // 1 means down stream module is ready to accept new data
-    .luma_ref_block_out                ()  , // y reference block
+    .filer_idle_in                     (1'b1)  ,      // 1 means down stream module is ready to accept new data
+    .luma_ref_block_out                (luma_ref_block_out)  , // y reference block
     .cb_ref_block_out                  ()  ,   // cb reference block
     .cr_ref_block_out                  ()  ,   // cr reference block
-    .cache_valid_out                   ()  ,    //1 - valid output
+    .cache_valid_out                   (cache_valid_out)  ,    //1 - valid output
     
-    .ref_pix_axi_ar_addr               ()  ,
-    .ref_pix_axi_ar_len                ()  ,
-    .ref_pix_axi_ar_size               ()  ,
-    .ref_pix_axi_ar_burst              ()  ,
-    .ref_pix_axi_ar_prot               ()  ,
-    .ref_pix_axi_ar_valid              ()  ,
-    .ref_pix_axi_ar_ready              ()  ,
-    .ref_pix_axi_r_data                ()  ,
-    .ref_pix_axi_r_resp                ()  ,
-    .ref_pix_axi_r_last                ()  ,
-    .ref_pix_axi_r_valid               ()  ,
-    .ref_pix_axi_r_ready               ()  ,
-	.cache_full_idle                   ()// asserts when all blocks in cache is fully idle
+    .ref_pix_axi_ar_addr               (ref_pix_axi_ar_addr )  ,
+    .ref_pix_axi_ar_len                (ref_pix_axi_ar_len  )  ,
+    .ref_pix_axi_ar_size               (ref_pix_axi_ar_size )  ,
+    .ref_pix_axi_ar_burst              (ref_pix_axi_ar_burst)  ,
+    .ref_pix_axi_ar_prot               (ref_pix_axi_ar_prot )  ,
+    .ref_pix_axi_ar_valid              (ref_pix_axi_ar_valid)  ,
+    .ref_pix_axi_ar_ready              (ref_pix_axi_ar_ready)  ,
+    .ref_pix_axi_r_data                (ref_pix_axi_r_data  )  ,
+    .ref_pix_axi_r_resp                (ref_pix_axi_r_resp  )  ,
+    .ref_pix_axi_r_last                (ref_pix_axi_r_last  )  ,
+    .ref_pix_axi_r_valid               (ref_pix_axi_r_valid )  ,
+    .ref_pix_axi_r_ready               (ref_pix_axi_r_ready )  ,
+	.cache_full_idle                   (cache_full_idle     )// asserts when all blocks in cache is fully idle
 
 
 );
@@ -179,22 +180,22 @@ inter_cache_pipe_hit_pipe cache_top
         .reset  (reset),
 
         .arid   (4'd0),
-        .araddr (),
-        .arlen  (),
-        .arsize  (),
-        .arburst(2'b01),
-        .arlock (),
-        .arcache(),
-        .arprot (),
-        .arvalid(),
-        .arready(),
+        .araddr (ref_pix_axi_ar_addr),
+        .arlen  (ref_pix_axi_ar_len),
+        .arsize  (ref_pix_axi_ar_size),
+        .arburst(ref_pix_axi_ar_burst),
+        .arlock (0),
+        .arcache(0),
+        .arprot (ref_pix_axi_ar_prot),
+        .arvalid(ref_pix_axi_ar_valid),
+        .arready(ref_pix_axi_ar_ready),
 
         .rid    (),
-        .rdata  (),
-        .rresp  (),
-        .rlast  (),
-        .rvalid (),
-        .rready (),
+        .rdata  (ref_pix_axi_r_data),
+        .rresp  (ref_pix_axi_r_resp),
+        .rlast  (ref_pix_axi_r_last),
+        .rvalid (ref_pix_axi_r_valid),
+        .rready (ref_pix_axi_r_ready),
 
         .awid   (   ),
         .awaddr (   ),
@@ -220,6 +221,8 @@ inter_cache_pipe_hit_pipe cache_top
         .bready  (1'b1)
      );
 
+assign {luma_ref_start_x_in} = file_rdata[MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0];
+assign {luma_ref_start_y_in} = file_rdata[MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1+16:0+16];
 
 //////////// INTERFACE DRIVERS /////////////////
 
@@ -234,10 +237,10 @@ fifo_write_driver
 xy_request_driver(
     .clk         (clk)                     ,
     .reset       (reset)                  ,
-    .out         ()     ,
-    .ready       ()       ,
+    .out         (file_rdata)     ,
+    .ready       (cache_idle_out)       ,
     .address     (),
-    .wr_en       ()        
+    .wr_en       (valid_in)        
 );
 
 

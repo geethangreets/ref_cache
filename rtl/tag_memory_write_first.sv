@@ -34,15 +34,15 @@ module tag_memory_write_first
     //---------------------------------------------------------------------------------------------------------------------
     
 
-   input                           	               clk;
-   input											            reset;
-   input	[TAG_ADDR_WDTH-1:0]      		            w_data_in;
-   input	[SET_ADDR_WDTH - C_LG_BANKS -1:0]	      r_addr_in;			// read 8 tags at once 
-   input	[TAG_BANK_LEN-1:0]				            w_addr_in;			// write 1 tag at once 3 LSBs for set_idx
-   input											            w_en_in;
-    //input                                        r_en_in;
-   output  reg [(1<<C_N_WAY)*TAG_ADDR_WDTH-1:0]    r_data_out;
-   output 	reg [(1<<C_N_WAY)-1:0]						valid_bits_out;
+   input                           	                clk;
+   input									        reset;
+   input	[TAG_ADDR_WDTH-1:0]      		        w_data_in;
+   input	[SET_ADDR_WDTH - C_LG_BANKS -1:0]	    r_addr_in;			// read 8 tags at once 
+   input	[TAG_BANK_LEN-1:0]				        w_addr_in;			// write 1 tag at once 3 LSBs for set_idx
+   input										    w_en_in;
+    //input                                         r_en_in;
+   output  reg [(1<<C_N_WAY)*TAG_ADDR_WDTH-1:0]     r_data_out;
+   output 	reg [(1<<C_N_WAY)-1:0]				    valid_bits_out;
    
    
    //---------------------------------------------------------------------------------------------------------------------
@@ -50,14 +50,14 @@ module tag_memory_write_first
     //---------------------------------------------------------------------------------------------------------------------
   
 
-   reg   [TAG_ADDR_WDTH-1:0]      				         mem [(1<<TAG_BANK_LEN)-1:0];
-   reg	[(1<<TAG_BANK_LEN)-1:0] 			            valid_bits;
-   reg 	[SET_ADDR_WDTH - C_LG_BANKS -1:0]	         r_addr_d;			// read 8 tags at once 
-   reg   [TAG_ADDR_WDTH-1:0]                          r_data_d[(1<<C_N_WAY)-1:0] ;
-   reg [(1<<C_N_WAY)-1:0]						            valid_bits_d;
-   //reg			[SET_ADDR_WDTH - Y_BANK_BITS-1:0]		out_address;
-//	reg         [TAG_BANK_LEN-1:0]                     count;
-//    reg                                             all_clear;
+   reg   [TAG_ADDR_WDTH-1:0]      				    mem [(1<<TAG_BANK_LEN)-1:0];
+   reg	[(1<<TAG_BANK_LEN)-1:0] 			        valid_bits;
+   reg 	[SET_ADDR_WDTH - C_LG_BANKS -1:0]	        r_addr_d;			// read 8 tags at once 
+   reg   [TAG_ADDR_WDTH-1:0]                        r_data_d[(1<<C_N_WAY)-1:0] ;
+   reg [(1<<C_N_WAY)-1:0]						    valid_bits_d;
+   //reg	[SET_ADDR_WDTH - Y_BANK_BITS-1:0]		out_address;
+//	reg     [TAG_BANK_LEN-1:0]                      count;
+//  reg                                             all_clear;
 //	integer state;
    wire [(1<<C_N_WAY)-1:0]valid_bit_sets[0 : (1<<SET_ADDR_WDTH)-1];
   
@@ -135,7 +135,7 @@ module tag_memory_write_first
          endcase
       end
       else begin
-             r_data_out =  {	r_data_d[3'b111],
+             r_data_out =  {  r_data_d[3'b111],
                               r_data_d[3'b110],
                               r_data_d[3'b101],
                               r_data_d[3'b100],

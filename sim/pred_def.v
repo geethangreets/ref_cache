@@ -373,8 +373,8 @@ parameter MAX_PIC_HEIGHT = 2048;
    localparam  BIT_DEPTH                   = PIXEL_WIDTH;
    localparam PIXEL_BITS = PIXEL_WIDTH + (2*PIXEL_WIDTH)/(C_SUB_WIDTH*C_SUB_HEIGHT); 
    
-   localparam CL_AXI_DIV_FAC1 = ({3{(PIXEL_BITS==12) | (PIXEL_BITS==15) | (PIXEL_BITS==16) }} & 3'd2) | ({3{(PIXEL_BITS==18)   | (PIXEL_BITS==20) | (PIXEL_BITS==24)}} & 3'd3) | ({3{(PIXEL_BITS==30)}} & 3'd4) | ({3{(PIXEL_BITS==36)}} & 3'd5); 
-   localparam CL_AXI_DIV_FAC  = ({3{(PIXEL_BITS==12) | (PIXEL_BITS==15) | (PIXEL_BITS==16) }} & 3'd2) | ({3{(PIXEL_BITS==18)   | (PIXEL_BITS==20) | (PIXEL_BITS==24)}} & 3'd3) | ({3{(PIXEL_BITS==30)}} & 3'd4) | ({3{(PIXEL_BITS==36)}} & 3'd5); 
+   localparam CL_AXI_DIV_FAC1 = ({3{(BIT_DEPTH==8)}} & 3'd1) | ({3{(BIT_DEPTH==10)}} & 3'd2) | ({3{(BIT_DEPTH==12)}} & 3'd2); 
+   localparam CL_AXI_DIV_FAC  = ({3{(BIT_DEPTH==8)}} & 3'd1) | ({3{(BIT_DEPTH==10)}} & 3'd2) | ({3{(BIT_DEPTH==12)}} & 3'd2); 
      
    /*
    PIXEL_BITS/CACHE_LINE_WIDTH(AXI LEN)
@@ -386,7 +386,15 @@ parameter MAX_PIC_HEIGHT = 2048;
    
    
    */
-    
+   /*
+   BIT_DEPTH/CACHE_LINE_WIDTH(AXI LEN)
+                     8              10             12
+                     
+      420           512(1)          640(2)         768(2)
+
+   
+   
+   */
     parameter  MAX_RESI_READ_DEPTH          = (16 * 32);
     
     // `ifdef BIT_DEPTH_8

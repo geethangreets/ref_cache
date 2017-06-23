@@ -33,3 +33,6 @@ vlog -work work -mixedsvvh +define+INSERT_MONITORS ../tb/cache_tb.sv
 
 
 vsim -voptargs="+acc" -t 1ps -lib work -sv_lib ../verif/memory_slave/rtl/ref_buf_mem_slave cache_tb
+
+log -r *
+run 100ps
