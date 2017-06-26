@@ -5,6 +5,9 @@ module cache_tb();
     `include "../sim/pred_def.v"
     `include "../sim/inter_axi_def.v"
     `include "../sim/cache_configs_def.v"    
+    
+    parameter IBC_REF_BLK_WIDTH = 8;
+    
     const realtime CLOCK_PERIOD = 10;
     const realtime HALF_CLOCK_PERIOD = CLOCK_PERIOD / 2;
     const realtime APP_TIME  = 0 * CLOCK_PERIOD;
@@ -66,6 +69,7 @@ module cache_tb();
    
    
 // datapath outputs	  ------------------------------------------       
+    logic [BIT_DEPTH* IBC_REF_BLK_WIDTH* IBC_REF_BLK_WIDTH  -1:0]          block_8x8_unrolled;
     logic [BIT_DEPTH* LUMA_REF_BLOCK_WIDTH* LUMA_REF_BLOCK_WIDTH -1:0]     luma_ref_block_out;
     logic [BIT_DEPTH* CHMA_REF_BLOCK_WIDTH* CHMA_REF_BLOCK_HIGHT -1:0]     cb_ref_block_out;
     logic [BIT_DEPTH* CHMA_REF_BLOCK_WIDTH* CHMA_REF_BLOCK_HIGHT -1:0]     cr_ref_block_out;
@@ -90,6 +94,8 @@ module cache_tb();
         reset =1;
         $timeformat(-9, 0, "ns", 6); // Format time output
         #((5 * CLOCK_PERIOD) + APP_TIME); // Wait some time until releasing reset
+        // ddr_soft_mem_block.data_wr_rd_block.memory.add_ref_DPB(int base_addr, int poc, int height, int width, int bit_depth, int SubWidthC, int SubHeightC);
+        ddr_soft_mem_block.data_wr_rd_block.memory.add_ref_DPB   (            0,       0,       1080,      1920,             8,             2,              2);
         reset = 0;
         #((10 * CLOCK_PERIOD) + APP_TIME);
 
@@ -112,10 +118,10 @@ inter_cache_pipe_hit_pipe cache_top
     .luma_ref_start_y_in               (luma_ref_start_y_in)  ,    // start y location of luma 
     .chma_ref_start_x_in 	           (0)  ,   // start x location of chroma 
     .chma_ref_start_y_in 	           (0)  ,   // start y location of chroma 
-    .luma_ref_width_x_in               (8)  ,     //width of reference block in luma
-    .chma_ref_width_x_in               (0)  ,     //width of reference block in chroma
-    .luma_ref_height_y_in              (8)  ,     //height of reference block in luma
-    .chma_ref_height_y_in              (0)  ,     //height of reference block in chroma
+    .luma_ref_width_x_in               (7)  ,     //width of reference block in luma (zero based))
+    .chma_ref_width_x_in               (0)  ,     //width of reference block in chroma (zero based))
+    .luma_ref_height_y_in              (7)  ,     //height of reference block in luma (zero based))
+    .chma_ref_height_y_in              (0)  ,     //height of reference block in chroma (zero based))
 
     .luma_ref_start_x_out              ()  ,  //block dimension output for reference
     .luma_ref_start_y_out              ()  ,   //block dimension output for reference
@@ -247,15 +253,25 @@ xy_request_driver(
 //-----------------------------------------------------------------
 
 
+    generate
+        genvar ii;
+        genvar jj;
+        
+        for(jj=0;jj <IBC_REF_BLK_WIDTH ; jj=jj+1 ) begin : row_iteration
+            for(ii=0 ; ii < IBC_REF_BLK_WIDTH ; ii = ii+1) begin : column_iteration
+                    assign  block_8x8_unrolled[(jj*IBC_REF_BLK_WIDTH + ii +1)*(BIT_DEPTH)-1: (jj*IBC_REF_BLK_WIDTH + ii)*BIT_DEPTH ] 
+                            = luma_ref_block_out[(jj*LUMA_REF_BLOCK_WIDTH + ii +1)*(BIT_DEPTH)-1: (jj*LUMA_REF_BLOCK_WIDTH + ii)*BIT_DEPTH ] ;
+            end
+        end
 
-
+    endgenerate 
 
 //////////// INTERFACE MONITORS /////////////////
 
 `ifdef INSERT_MONITORS
 
-inf_monitor #( .WIDTH (),.DEBUG (0) , .SKIP_ZERO (1), .FILE_NAME("../simvectors/ibc_cache_receive.bin"))
-cache_out_mon( .clk (clk),.reset(reset),.data1(),.valid   () ,.ready(1'b1));
+inf_monitor #( .WIDTH (BIT_DEPTH* IBC_REF_BLK_WIDTH* IBC_REF_BLK_WIDTH),.DEBUG (0) , .SKIP_ZERO (1), .FILE_NAME("../simvectors/ibc_cache_receive.bin"))
+cache_out_mon( .clk (clk),.reset(reset),.data1(block_8x8_unrolled),.valid   (cache_valid_out) ,.ready(1'b1));
 
 
 `endif
