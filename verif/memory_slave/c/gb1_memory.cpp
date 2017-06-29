@@ -48,10 +48,15 @@ typedef unsigned char byte;
 
 
 // static memory_array* memBlock = (memory_array*)malloc(sizeof (memory_array));
-FILE* DBP_frame = fopen(FILE_PATH "reconstructed_full.yuv", "rb");
+FILE* DBP_frame;
+
+
 static memory_array* memBlock ;
 void memory_init(){
-
+	if ((fopen_s(&DBP_frame, FILE_PATH "reconstructed_full.yuv", "rb")) != 0){
+		printf("File was not opened\n");
+		getchar();
+	}
 	 memBlock = new memory_array;
 }
 
@@ -85,12 +90,13 @@ int add_ref_DPB(int base_addr, int poc, int height, int width, int bit_depth, in
     int inner_x, inner_y;
     int location;
     
-    for (i = 0; i<height ; i++){
-        ctu_x = i/CTU_SIZE;
-        blk_x = i%CTU_SIZE;
-        inner_x = (blk_x%REF_BLOCK_SIZE) * (bit_depth == 8 ? 1 : 2);
-        blk_x = blk_x/REF_BLOCK_SIZE;
-		for (j = 0; j<width ; j++){
+    for (j = 0; j<height ; j++){
+		ctu_y = j / CTU_SIZE;
+		blk_y = j%CTU_SIZE;
+		inner_y = blk_y%REF_BLOCK_SIZE;
+		blk_y = blk_y / REF_BLOCK_SIZE;
+
+		for (i = 0; i<width ; i++){
 			seek_num = frame_offset + (count);
 			count += (bit_depth == 8 ? 1 : 2);
 			fseek(DBP_frame, seek_num, SEEK_SET);
@@ -101,10 +107,10 @@ int add_ref_DPB(int base_addr, int poc, int height, int width, int bit_depth, in
 				printf("file position not available\n");
 				return -1;
 			}
-            ctu_y = j/CTU_SIZE;
-            blk_y = j%CTU_SIZE;
-            inner_y = blk_y%REF_BLOCK_SIZE;
-            blk_y = blk_y/REF_BLOCK_SIZE;
+			ctu_x = i / CTU_SIZE;
+			blk_x = i%CTU_SIZE;
+			inner_x = (blk_x%REF_BLOCK_SIZE) * (bit_depth == 8 ? 1 : 2);
+			blk_x = blk_x / REF_BLOCK_SIZE;
             location = inner_x + inner_y * blk_x_stride + blk_x * blk_stride + blk_y * ctu_x_stride + lu_ctu_offset + ctu_x * ctu_stride + ctu_y * pic_x_stride;
             if (bit_depth == 8) {
                 // if(memBlock->byte_elem[location] !=0){
@@ -190,6 +196,7 @@ int add_ref_DPB(int base_addr, int poc, int height, int width, int bit_depth, in
 	fclose(DBP_frame);
     return 0;
 }
+
 /* int main()
 {
 	printf("Cpp Memory model\n");
@@ -201,13 +208,15 @@ int add_ref_DPB(int base_addr, int poc, int height, int width, int bit_depth, in
 		// value = (unsigned char) i;
 		// memory_write(i,value);
 	// }
+	memory_init();
 	for (int i =0; i< 1000000000; i++)
 	{
 		memory_write(i,0);
 	}
-    FILE* DBP_frame = fopen(FILE_PATH "reconstructed_full.yuv", "rb");
-    add_ref_DPB(DBP_frame, 0, 0, 1080, 1920, 8, 2, 2);
+    
+    add_ref_DPB(0, 0, 1080, 1920, 8, 2, 2);
 
 
 	return 0;
-} */
+} 
+*/

@@ -7,6 +7,7 @@ module cache_tb();
     `include "../sim/cache_configs_def.v"    
     
     parameter IBC_REF_BLK_WIDTH = 8;
+    parameter X_FILE_WIDTH = 32;
     
     const realtime CLOCK_PERIOD = 10;
     const realtime HALF_CLOCK_PERIOD = CLOCK_PERIOD / 2;
@@ -88,7 +89,7 @@ module cache_tb();
     logic 						                               ref_pix_axi_r_valid;
     logic 							                           ref_pix_axi_r_ready;
             
-    logic [32-1:0]                                                     file_rdata;
+    logic [X_FILE_WIDTH*2-1:0]                                 file_rdata;
     
     initial begin
         reset =1;
@@ -110,12 +111,18 @@ inter_cache_pipe_hit_pipe cache_top
     .clk                               (clk)  ,
     .reset                             (reset)  ,
 
+//-------upstream interface------
 	.ref_idx_in_in                     (0)  ,      // default to zero (for current frame)
-    .valid_in                          (valid_in)  ,           // input valid
+    .valid_in                          (valid_in)  ,           // upstream input valid
     .cache_idle_out                    (cache_idle_out)  ,         // 1 - cache is ready to accept new input
+
+    .pic_width                         (1920)  ,
+    .pic_height                        (1080)  ,
+    .ch_frac_x                         (0)  ,       //optional default to zero
+    .ch_frac_y                         (0)  ,       //optional default to zero
     
-    .luma_ref_start_x_in 	           (luma_ref_start_x_in)  ,   // start x location of luma 
-    .luma_ref_start_y_in               (luma_ref_start_y_in)  ,    // start y location of luma 
+    .luma_ref_start_x_in 	           (luma_ref_start_x_in)  ,   // start x location of luma pixel address
+    .luma_ref_start_y_in               (luma_ref_start_y_in)  ,    // start y location of luma pixel address 
     .chma_ref_start_x_in 	           (0)  ,   // start x location of chroma 
     .chma_ref_start_y_in 	           (0)  ,   // start y location of chroma 
     .luma_ref_width_x_in               (7)  ,     //width of reference block in luma (zero based))
@@ -123,30 +130,26 @@ inter_cache_pipe_hit_pipe cache_top
     .luma_ref_height_y_in              (7)  ,     //height of reference block in luma (zero based))
     .chma_ref_height_y_in              (0)  ,     //height of reference block in chroma (zero based))
 
-    .luma_ref_start_x_out              ()  ,  //block dimension output for reference
-    .luma_ref_start_y_out              ()  ,   //block dimension output for reference
+    .luma_ref_start_x_out              ()  ,  //block dimension output for reference 
+    .luma_ref_start_y_out              ()  ,   //block dimension output for reference 
     .chma_ref_start_x_out              ()  ,  //block dimension output for reference
     .chma_ref_start_y_out              ()  ,  //block dimension output for reference
-    .luma_ref_width_x_out              ()  ,    //block dimension output for reference
-    .chma_ref_width_x_out              ()  ,    //block dimension output for reference
-    .luma_ref_height_y_out             ()  ,    //block dimension output for reference
-    .chma_ref_height_y_out             ()  ,    //block dimension output for reference
+    .luma_ref_width_x_out              ()  ,    //block dimension output for reference 
+    .chma_ref_width_x_out              ()  ,    //block dimension output for reference 
+    .luma_ref_height_y_out             ()  ,    //block dimension output for reference 
+    .chma_ref_height_y_out             ()  ,    //block dimension output for reference 
     
 	
-    .block_x_offset_luma               ()  ,   // valid pixel starting location x direction in luma output
-    .block_y_offset_luma               ()  ,   // valid pixel starting location y direction in luma output
-    .block_x_offset_chma               ()  ,   // valid pixel starting location x direction in chroma output
-    .block_y_offset_chma               ()  ,   // valid pixel starting location y direction in chroma output
-    .block_x_end_luma                  ()  ,   // valid pixel ending location x direction in luma output
-    .block_y_end_luma                  ()  ,   // valid pixel ending location y direction in luma output
-    .block_x_end_chma                  ()  ,   // valid pixel ending location x direction in chroma output
-    .block_y_end_chma                  ()  ,   // valid pixel ending location y direction in chroma output
+    .block_x_offset_luma               ()  ,   // valid pixel starting location x direction in luma output - block width if target within picture boundaries
+    .block_y_offset_luma               ()  ,   // valid pixel starting location y direction in luma output - block width if target within picture boundaries
+    .block_x_offset_chma               ()  ,   // valid pixel starting location x direction in chroma output - block width if target within picture boundaries
+    .block_y_offset_chma               ()  ,   // valid pixel starting location y direction in chroma output - block width if target within picture boundaries
+    .block_x_end_luma                  ()  ,   // valid pixel ending location x direction in luma output - zero if target within picture boundaries
+    .block_y_end_luma                  ()  ,   // valid pixel ending location y direction in luma output - zero if target within picture boundaries
+    .block_x_end_chma                  ()  ,   // valid pixel ending location x direction in chroma output - zero if target within picture boundaries
+    .block_y_end_chma                  ()  ,   // valid pixel ending location y direction in chroma output - zero if target within picture boundaries
 
-
-    .pic_width                         (1920)  ,
-    .pic_height                        (1080)  ,
-    .ch_frac_x                         (0)  ,       //optional default to zero
-    .ch_frac_y                         (0)  ,       //optional default to zero
+//-------downstream interface------
     .ch_frac_x_out                     ()  ,      //optional 
     .ch_frac_y_out                     ()  ,      //optional
 
@@ -155,6 +158,11 @@ inter_cache_pipe_hit_pipe cache_top
     .cb_ref_block_out                  ()  ,   // cb reference block
     .cr_ref_block_out                  ()  ,   // cr reference block
     .cache_valid_out                   (cache_valid_out)  ,    //1 - valid output
+    
+//--- auxilary status---------------
+	.cache_full_idle                   (cache_full_idle     )// asserts when all blocks in cache is fully idle
+    
+//----axi interface-----------------
     
     .ref_pix_axi_ar_addr               (ref_pix_axi_ar_addr )  ,
     .ref_pix_axi_ar_len                (ref_pix_axi_ar_len  )  ,
@@ -168,8 +176,6 @@ inter_cache_pipe_hit_pipe cache_top
     .ref_pix_axi_r_last                (ref_pix_axi_r_last  )  ,
     .ref_pix_axi_r_valid               (ref_pix_axi_r_valid )  ,
     .ref_pix_axi_r_ready               (ref_pix_axi_r_ready )  ,
-	.cache_full_idle                   (cache_full_idle     )// asserts when all blocks in cache is fully idle
-
 
 );
 
@@ -228,13 +234,13 @@ inter_cache_pipe_hit_pipe cache_top
      );
 
 assign {luma_ref_start_x_in} = file_rdata[MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0];
-assign {luma_ref_start_y_in} = file_rdata[MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1+16:0+16];
+assign {luma_ref_start_y_in} = file_rdata[MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1+X_FILE_WIDTH:0+X_FILE_WIDTH];
 
 //////////// INTERFACE DRIVERS /////////////////
 
 fifo_write_driver 
 #(
-    .WIDTH (32),
+    .WIDTH (X_FILE_WIDTH*2),
     .RESET_TIME (100),
     .VALID_FIRST(1),
     .FILE_NAME("../simvectors/ibc_cache_request.bin")
@@ -270,7 +276,7 @@ xy_request_driver(
 
 `ifdef INSERT_MONITORS
 
-inf_monitor #( .WIDTH (BIT_DEPTH* IBC_REF_BLK_WIDTH* IBC_REF_BLK_WIDTH),.DEBUG (0) , .SKIP_ZERO (1), .FILE_NAME("../simvectors/ibc_cache_receive.bin"))
+inf_monitor #( .WIDTH (BIT_DEPTH* IBC_REF_BLK_WIDTH* IBC_REF_BLK_WIDTH),.DEBUG (1) , .SKIP_ZERO (1), .FILE_NAME("../simvectors/ibc_cache_receive.bin"))
 cache_out_mon( .clk (clk),.reset(reset),.data1(block_8x8_unrolled),.valid   (cache_valid_out) ,.ready(1'b1));
 
 
