@@ -8,8 +8,9 @@
 
 ### How to run the simulation ###
 
-Use the following command to run the simulation with existing simvectors
-vsim -do runsim.do
+Use the following command to run the simulation with existing simvectors use: 
+##
+$vsim -do runsim.do$
 
 ### Contribution guidelines ###
 
