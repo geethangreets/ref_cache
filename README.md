@@ -3,26 +3,19 @@
 
 ### What is this repository for? ###
 
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+* This repository contains a cache that supplies reference pixel blocks of arbitrary width hieght.
+* Inter and fractional motion vectors are supported
 
-### How do I get set up? ###
+### How to run the simulation ###
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
+Use the following command to run the simulation with existing simvectors
+vsim -do runsim.do
 
 ### Contribution guidelines ###
 
-* Writing tests
-* Code review
-* Other guidelines
+* Adding RTL design
+* Test infrastructure
 
 ### Who do I talk to? ###
 
-* Repo owner or admin
-* Other community or team contact
+* geethan@paraqum.com
