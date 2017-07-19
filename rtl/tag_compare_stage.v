@@ -194,10 +194,10 @@ module tag_compare_stage
 
    assign block_number_3 = {block_number_3_a};
 
-   assign iu_idx	      = {curr_x_addr_reg[X_ADDR_WDTH - C_L_H_SIZE -1:CTB_SIZE_WIDTH - C_L_H_SIZE]};
-   assign iu_row_idx 	= {curr_y_addr_reg[Y_ADDR_WDTH - C_L_V_SIZE -1:CTB_SIZE_WIDTH - C_L_V_SIZE]};
-   assign bu_idx 		   = {curr_x_addr_reg[2:0]};
-   assign bu_row_idx 	= {curr_y_addr_reg[2:0]};
+   assign iu_idx	       = {curr_x_addr_reg[X_ADDR_WDTH - C_L_H_SIZE -1:CTB_SIZE_WIDTH - C_L_H_SIZE]};
+   assign iu_row_idx 	   = {curr_y_addr_reg[Y_ADDR_WDTH - C_L_V_SIZE -1:CTB_SIZE_WIDTH - C_L_V_SIZE]};
+   assign bu_idx 		   = {curr_x_addr_reg[C_L_H_SIZE-1:0]};
+   assign bu_row_idx 	   = {curr_y_addr_reg[C_L_V_SIZE-1:0]};
    
 
 always@(posedge clk) begin : TAG_COMPARE_STAGE

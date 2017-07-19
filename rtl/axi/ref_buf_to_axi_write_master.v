@@ -176,14 +176,13 @@ module ref_buf_to_axi_write_master(
 	assign		{	Xc_out_8x8,Yc_out_8x8,
 					yy_pixels_8x8,cb_pixels_8x8,cr_pixels_8x8} = fifo_data_in;
 					
-	assign y_8x8_in_ctu = Yc_out_8x8[CTB_SIZE_WIDTH - LOG2_MIN_DU_SIZE - 1:0];
-	assign x_8x8_in_ctu = Xc_out_8x8[CTB_SIZE_WIDTH - LOG2_MIN_DU_SIZE - 1:0];
+	assign y_8x8_in_ctu = Yc_out_8x8[CTB_SIZE_WIDTH - C_L_V_SIZE - 1:0];
+	assign x_8x8_in_ctu = Xc_out_8x8[CTB_SIZE_WIDTH - C_L_H_SIZE - 1:0];
 	
-	assign x_ctu = Xc_out_8x8[X11_ADDR_WDTH - LOG2_MIN_DU_SIZE - 1:CTB_SIZE_WIDTH - LOG2_MIN_DU_SIZE ];
-	assign y_ctu = Yc_out_8x8[X11_ADDR_WDTH - LOG2_MIN_DU_SIZE - 1:CTB_SIZE_WIDTH - LOG2_MIN_DU_SIZE ];
+	assign x_ctu = Xc_out_8x8[X11_ADDR_WDTH - C_L_H_SIZE - 1:CTB_SIZE_WIDTH - C_L_H_SIZE ];
+	assign y_ctu = Yc_out_8x8[X11_ADDR_WDTH - C_L_V_SIZE - 1:CTB_SIZE_WIDTH - C_L_V_SIZE ];
 		
-   assign axi_wstrb_nxt = {{((AXI_CACHE_DATA_WDTH/8)-((YY_WIDTH+2*CH_WIDTH)/(8*(PIX_REF_AXI_AX_LEN+1)))){1'b0}}, 
-                                                    {(((YY_WIDTH+2*CH_WIDTH)/(8*(PIX_REF_AXI_AX_LEN+1)))+ ( ((YY_WIDTH+2*CH_WIDTH)%(8*(PIX_REF_AXI_AX_LEN+1)))==0?0:1  ) ){1'b1}}};
+   assign axi_wstrb_nxt = = (CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH;
                         
 		// synthesis translate_off
 ref_buff_fifo_monitor
@@ -264,7 +263,7 @@ ref_buff_fifo_monitor
             case(state_axi_write)
                 STATE_AXI_WRITE_ADDRESS_SEND: begin
                     if(!fifo_is_empty_in) begin
-                        axi_awaddr <= current_pic_dpb_base_addr_use + (y_ctu << `REF_PIX_IU_ROW_OFFSET_SHIFT)+ (x_ctu<<`REF_PIX_IU_OFFSET_SHIFT) +  (y_8x8_in_ctu<<`REF_PIX_BU_ROW_OFFSET_SHIFT) + (x_8x8_in_ctu<<`REF_PIX_BU_OFFSET_SHIFT);
+                        axi_awaddr <= current_pic_dpb_base_addr_use + (y_ctu * `REF_PIX_IU_ROW_OFFSET)+ (x_ctu*`REF_PIX_IU_OFFSET) +  (y_8x8_in_ctu* `REF_PIX_BU_ROW_OFFSET) + (x_8x8_in_ctu* `REF_PIX_BU_OFFSET);
                         axi_awvalid <= 1;
                         state_axi_write <= STATE_AXI_WRITE_ADDRESS_SEND_WAIT;
                     end  

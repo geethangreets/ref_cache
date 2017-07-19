@@ -3,8 +3,10 @@
 
 ### What is this repository for? ###
 
-* This repository contains a cache that supplies reference pixel blocks of arbitrary width hieght.
+* This repository contains a cache that supplies reference pixel blocks of arbitrary width/hieght.
 * Inter and fractional motion vectors are supported
+* Out of picture boundary references are supported
+* Both upstream and downstream interfaces support handshake
 
 ### How to run the simulation ###
 

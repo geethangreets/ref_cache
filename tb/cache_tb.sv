@@ -130,6 +130,7 @@ inter_cache_pipe_hit_pipe cache_top
     .luma_ref_height_y_in              (7)  ,     //height of reference block in luma (zero based))
     .chma_ref_height_y_in              (0)  ,     //height of reference block in chroma (zero based))
 
+//-------downstream interface------
     .luma_ref_start_x_out              ()  ,  //block dimension output for reference 
     .luma_ref_start_y_out              ()  ,   //block dimension output for reference 
     .chma_ref_start_x_out              ()  ,  //block dimension output for reference
@@ -149,7 +150,6 @@ inter_cache_pipe_hit_pipe cache_top
     .block_x_end_chma                  ()  ,   // valid pixel ending location x direction in chroma output - zero if target within picture boundaries
     .block_y_end_chma                  ()  ,   // valid pixel ending location y direction in chroma output - zero if target within picture boundaries
 
-//-------downstream interface------
     .ch_frac_x_out                     ()  ,      //optional 
     .ch_frac_y_out                     ()  ,      //optional
 
@@ -160,7 +160,7 @@ inter_cache_pipe_hit_pipe cache_top
     .cache_valid_out                   (cache_valid_out)  ,    //1 - valid output
     
 //--- auxilary status---------------
-	.cache_full_idle                   (cache_full_idle     )// asserts when all blocks in cache is fully idle
+	.cache_full_idle                   (cache_full_idle     ),// asserts when all blocks in cache is fully idle
     
 //----axi interface-----------------
     
@@ -175,7 +175,7 @@ inter_cache_pipe_hit_pipe cache_top
     .ref_pix_axi_r_resp                (ref_pix_axi_r_resp  )  ,
     .ref_pix_axi_r_last                (ref_pix_axi_r_last  )  ,
     .ref_pix_axi_r_valid               (ref_pix_axi_r_valid )  ,
-    .ref_pix_axi_r_ready               (ref_pix_axi_r_ready )  ,
+    .ref_pix_axi_r_ready               (ref_pix_axi_r_ready )  
 
 );
 
