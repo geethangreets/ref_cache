@@ -74,8 +74,13 @@ module cache_tb();
     logic [BIT_DEPTH* LUMA_REF_BLOCK_WIDTH* LUMA_REF_BLOCK_WIDTH -1:0]     luma_ref_block_out;
     logic [BIT_DEPTH* CHMA_REF_BLOCK_WIDTH* CHMA_REF_BLOCK_HIGHT -1:0]     cb_ref_block_out;
     logic [BIT_DEPTH* CHMA_REF_BLOCK_WIDTH* CHMA_REF_BLOCK_HIGHT -1:0]     cr_ref_block_out;
+    
+    logic                               write_back_rd_en;
+    logic                               write_back_empty;
+    logic                               write_back_nempty;
+    logic [(X_ADDR_WDTH -LOG2_MIN_DU_SIZE)*2 + (BIT_DEPTH * IBC_REF_BLK_WIDTH * IBC_REF_BLK_WIDTH) -1 :0]     write_back_data;
 
-// axi master interface  ------------------------------------------       
+// axi master read interface  ------------------------------------------       
     logic [AXI_ADDR_WDTH-1:0]		                           ref_pix_axi_ar_addr;
     logic  [7:0]					                           ref_pix_axi_ar_len;
     logic 	[2:0]					                           ref_pix_axi_ar_size;
@@ -88,8 +93,30 @@ module cache_tb();
     logic 						                               ref_pix_axi_r_last;
     logic 						                               ref_pix_axi_r_valid;
     logic 							                           ref_pix_axi_r_ready;
+    
+    
+// axi master write interface  ------------------------------------------  
+    wire                                                        axi_awid    ;
+    wire  [7:0]                                                 axi_awlen   ;
+    wire  [2:0]                                                 axi_awsize  ;
+    wire  [1:0]                                                 axi_awburst ;
+    wire                    	                                axi_awlock  ;
+    wire  [3:0]                                                 axi_awcache ;
+    wire  [2:0]                                                 axi_awprot  ;
+    wire                                                        axi_awvalid	;
+    wire  [AXI_ADDR_WDTH-1:0]                                   axi_awaddr	;
+    wire                  	                                    axi_awready	;
+    wire  [AXI_CACHE_DATA_WDTH/8-1:0]	                        axi_wstrb	;
+    wire                                 	                    axi_wlast	;
+    wire                                 	                    axi_wvalid	;
+    wire  [AXI_CACHE_DATA_WDTH -1:0]	                        axi_wdata	;
+    wire                                                        axi_wready	;
+    wire                     	                                axi_bid		;
+    wire  [1:0]                                                 axi_bresp	;
+    wire                     	                                axi_bvalid	;
+    wire                                                        axi_bready	;
             
-    logic [X_FILE_WIDTH*2-1:0]                                 file_rdata;
+    logic [X_FILE_WIDTH*2-1:0]              file_rdata;
     
     initial begin
         reset =1;
@@ -104,7 +131,25 @@ module cache_tb();
     always
         #HALF_CLOCK_PERIOD clk = ~clk;
 
+request_issuer
+#(
+    .BLOCK_SIZE     (IBC_REF_BLK_WIDTH),
+    .IMG_WIDTH      (1920),
+    .IMG_HEIGHT     (1080)
+)
+request_issuer
+(
+    .clk                 (clk)                  ,
+    .reset               (reset)                ,
+    .cache_idle_in       (cache_idle_out)        ,
+    .cache_valid_out     ()      ,
+	.cache_req_data_out  ()   ,
+    .write_back_en_out   (write_back_nempty)    ,
+	.write_back_ack_in   (write_back_rd_en)    ,
+	.write_back_data     (write_back_data)
+);
 
+assign write_back_empty = ~ write_back_nempty;
 
 inter_cache_pipe_hit_pipe cache_top
 (
@@ -123,12 +168,12 @@ inter_cache_pipe_hit_pipe cache_top
     
     .luma_ref_start_x_in 	           (luma_ref_start_x_in)  ,   // start x location of luma pixel address
     .luma_ref_start_y_in               (luma_ref_start_y_in)  ,    // start y location of luma pixel address 
-    .chma_ref_start_x_in 	           (0)  ,   // start x location of chroma 
-    .chma_ref_start_y_in 	           (0)  ,   // start y location of chroma 
-    .luma_ref_width_x_in               (7)  ,     //width of reference block in luma (zero based))
-    .chma_ref_width_x_in               (0)  ,     //width of reference block in chroma (zero based))
-    .luma_ref_height_y_in              (7)  ,     //height of reference block in luma (zero based))
-    .chma_ref_height_y_in              (0)  ,     //height of reference block in chroma (zero based))
+    .chma_ref_start_x_in 	           ('d0)  ,   // start x location of chroma 
+    .chma_ref_start_y_in 	           ('d0)  ,   // start y location of chroma 
+    .luma_ref_width_x_in               ('d7)  ,     //width of reference block in luma (zero based))
+    .chma_ref_width_x_in               ('d0)  ,     //width of reference block in chroma (zero based))
+    .luma_ref_height_y_in              ('d7)  ,     //height of reference block in luma (zero based))
+    .chma_ref_height_y_in              ('d0)  ,     //height of reference block in chroma (zero based))
 
 //-------downstream interface------
     .luma_ref_start_x_out              ()  ,  //block dimension output for reference 
@@ -180,6 +225,42 @@ inter_cache_pipe_hit_pipe cache_top
 );
 
 
+ref_buf_to_axi_write_master
+cache_wb_blk
+(
+    .clk                 (clk  )       ,
+    .reset               (reset)       ,
+	//fifo interface      
+	.fifo_is_empty_in    (write_back_empty  )       ,
+	.fifo_rd_en_out	     (write_back_rd_en	)       ,
+	.fifo_data_in	     (write_back_data   )       ,   
+	.dpb_axi_addr_in     (0   )       ,
+    .pic_width_in        (1920      )       ,
+    .pic_height_in       (1080     )       ,
+    //axi interface
+    .axi_awid            (axi_awid          )       ,     
+    .axi_awlen           (axi_awlen         )       ,    
+    .axi_awsize          (axi_awsize        )       ,   
+    .axi_awburst         (axi_awburst       )       ,  
+    .axi_awlock          (axi_awlock        )       ,   
+    .axi_awcache         (axi_awcache       )       ,  
+    .axi_awprot          (axi_awprot        )       ,   
+    .axi_awvalid         (axi_awvalid       )       ,
+    .axi_awaddr          (axi_awaddr        )       ,
+    .axi_awready         (axi_awready       )       ,
+    .axi_wstrb           (axi_wstrb         )       ,
+    .axi_wlast           (axi_wlast         )       ,
+    .axi_wvalid          (axi_wvalid        )       ,
+    .axi_wdata           (axi_wdata         )       ,
+    .axi_wready          (axi_wready        )       ,
+    .axi_bid             (axi_bid           )       ,
+    .axi_bresp           (axi_bresp         )       ,
+    .axi_bvalid          (axi_bvalid        )       ,
+    .axi_bready          (axi_bready        )
+    
+    
+);
+
 // synthesis translate_off
     mem_slave_top_module
     #(
@@ -209,30 +290,34 @@ inter_cache_pipe_hit_pipe cache_top
         .rvalid (ref_pix_axi_r_valid),
         .rready (ref_pix_axi_r_ready),
 
-        .awid   (   ),
-        .awaddr (   ),
-        .awlen  (   ),
-        .awsize (   ),
-        .awburst(   ),
-        .awlock (),
-        .awcache(),
-        .awprot (),
-        .awvalid( 1'b0  ),
-        .awready(   ),
+        .awid       (axi_awid       ),
+        .awaddr     (axi_awaddr     ),
+        .awlen      (axi_awlen      ),
+        .awsize     (axi_awsize     ),
+        .awburst    (axi_awburst    ),
+        .awlock     (axi_awlock     ),
+        .awcache    (axi_awcache    ),
+        .awprot     (axi_awprot     ),
+        .awvalid    (axi_awvalid    ),
+        .awready    (axi_awready    ),
 
-        .wid    (   ),
-        .wdata  (   ),
-        .wstrb  (   ),
-        .wvalid ( 1'b0  ),
-        .wlast  (   ),
-        .wready (   ),
-
-        .bid    (),
-        .bresp  (),
-        .bvalid (),
-        .bready  (1'b1)
+        .wid        (   ),
+        .wdata      (axi_wdata      ),
+        .wstrb      (axi_wstrb      ),
+        .wvalid     (axi_wvalid     ),
+        .wlast      (axi_wlast      ),
+        .wready     (axi_wready     ),
+    
+        .bid        (axi_bid        ),
+        .bresp      (axi_bresp      ),
+        .bvalid     (axi_bvalid     ),
+        .bready     (axi_bready     )
      );
 
+
+
+     
+     
 assign {luma_ref_start_x_in} = file_rdata[MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0];
 assign {luma_ref_start_y_in} = file_rdata[MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1+X_FILE_WIDTH:0+X_FILE_WIDTH];
 

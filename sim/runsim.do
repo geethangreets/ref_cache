@@ -4,6 +4,8 @@
 
 vlog -work work ../verif/fifo_write_driver.v
 vlog -work work ../verif/inf_monitor.v
+vlog -sv -work work ../verif/request_issuer.sv
+vlog -sv -work work ../verif/fetch_block_from_file.sv
 vlog -work work ../rtl/geet_fifo_almost_full.v
 
 vlog  -sv ../verif/memory_slave/rtl/mem_slave_top_module.v
@@ -13,6 +15,7 @@ vlog  -sv ../verif/memory_slave/rtl/data_read_write.v
 vlog  -sv ../verif/memory_slave/rtl/data_resp.v
 vlog  -sv "../verif/memory_slave/rtl/memory_module_virtual_memory.sv"
 
+vlog -work work ../rtl/axi/ref_buf_to_axi_write_master.v
 vlog -work work ../rtl/cache_conf_stage.v
 vlog -work work ../rtl/num_val_clines_generator.v
 vlog -work work ../rtl/num_val_clines_generator_ch.v
