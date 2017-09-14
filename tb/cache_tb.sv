@@ -123,7 +123,7 @@ module cache_tb();
         $timeformat(-9, 0, "ns", 6); // Format time output
         #((5 * CLOCK_PERIOD) + APP_TIME); // Wait some time until releasing reset
         // ddr_soft_mem_block.data_wr_rd_block.memory.add_ref_DPB(int base_addr, int poc, int height, int width, int bit_depth, int SubWidthC, int SubHeightC);
-        ddr_soft_mem_block.data_wr_rd_block.memory.add_ref_DPB   (            0,       0,       1080,      1920,             8,             2,              2);
+        //ddr_soft_mem_block.data_wr_rd_block.memory.add_ref_DPB   (            0,       0,       1080,      1920,             8,             2,              2);
         reset = 0;
         #((10 * CLOCK_PERIOD) + APP_TIME);
 
@@ -142,8 +142,8 @@ request_issuer
     .clk                 (clk)                  ,
     .reset               (reset)                ,
     .cache_idle_in       (cache_idle_out)        ,
-    .cache_valid_out     ()      ,
-	.cache_req_data_out  ()   ,
+    .cache_valid_out     (valid_in)      ,
+	.cache_req_data_out  (file_rdata)   ,
     .write_back_en_out   (write_back_nempty)    ,
 	.write_back_ack_in   (write_back_rd_en)    ,
 	.write_back_data     (write_back_data)
@@ -323,22 +323,22 @@ assign {luma_ref_start_y_in} = file_rdata[MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1+X_
 
 //////////// INTERFACE DRIVERS /////////////////
 
-fifo_write_driver 
-#(
-    .WIDTH (X_FILE_WIDTH*2),
-    .RESET_TIME (100),
-    .VALID_FIRST(1),
-    .FILE_NAME("../simvectors/ibc_cache_request.bin")
-)
+// fifo_write_driver 
+// #(
+    // .WIDTH (X_FILE_WIDTH*2),
+    // .RESET_TIME (100),
+    // .VALID_FIRST(1),
+    // .FILE_NAME("../simvectors/ibc_cache_request.bin")
+// )
 
-xy_request_driver(
-    .clk         (clk)                     ,
-    .reset       (reset)                  ,
-    .out         (file_rdata)     ,
-    .ready       (cache_idle_out)       ,
-    .address     (),
-    .wr_en       (valid_in)        
-);
+// xy_request_driver(
+    // .clk         (clk)                     ,
+    // .reset       (reset)                  ,
+    // .out         (file_rdata)     ,
+    // .ready       (cache_idle_out)       ,
+    // .address     (),
+    // .wr_en       (valid_in)        
+// );
 
 
 //-----------------------------------------------------------------
