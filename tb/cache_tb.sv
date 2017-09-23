@@ -149,6 +149,10 @@ request_issuer
 	.write_back_data     (write_back_data)
 );
 
+     
+assign {luma_ref_start_x_in} = file_rdata[MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0];
+assign {luma_ref_start_y_in} = file_rdata[MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1+X_FILE_WIDTH:0+X_FILE_WIDTH];
+
 assign write_back_empty = ~ write_back_nempty;
 
 inter_cache_pipe_hit_pipe cache_top
@@ -317,31 +321,7 @@ cache_wb_blk
 
 
      
-     
-assign {luma_ref_start_x_in} = file_rdata[MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0];
-assign {luma_ref_start_y_in} = file_rdata[MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1+X_FILE_WIDTH:0+X_FILE_WIDTH];
 
-//////////// INTERFACE DRIVERS /////////////////
-
-// fifo_write_driver 
-// #(
-    // .WIDTH (X_FILE_WIDTH*2),
-    // .RESET_TIME (100),
-    // .VALID_FIRST(1),
-    // .FILE_NAME("../simvectors/ibc_cache_request.bin")
-// )
-
-// xy_request_driver(
-    // .clk         (clk)                     ,
-    // .reset       (reset)                  ,
-    // .out         (file_rdata)     ,
-    // .ready       (cache_idle_out)       ,
-    // .address     (),
-    // .wr_en       (valid_in)        
-// );
-
-
-//-----------------------------------------------------------------
 
 
     generate
@@ -361,7 +341,7 @@ assign {luma_ref_start_y_in} = file_rdata[MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1+X_
 
 `ifdef INSERT_MONITORS
 
-inf_monitor #( .WIDTH (BIT_DEPTH* IBC_REF_BLK_WIDTH* IBC_REF_BLK_WIDTH),.DEBUG (1) , .SKIP_ZERO (1), .FILE_NAME("../simvectors/ibc_cache_receive.bin"))
+inf_monitor #( .WIDTH (BIT_DEPTH* IBC_REF_BLK_WIDTH* IBC_REF_BLK_WIDTH),.DEBUG (0) , .SKIP_ZERO (1), .FILE_NAME("../simvectors/ibc_cache_receive.bin"))
 cache_out_mon( .clk (clk),.reset(reset),.data1(block_8x8_unrolled),.valid   (cache_valid_out) ,.ready(1'b1));
 
 
