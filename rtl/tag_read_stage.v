@@ -5,7 +5,9 @@ module tag_read_stage
    reset,
 
    dest_enable_wire_valid,
+   is_req_read_out,
    set_input_stage_valid,
+   is_req_read_in,
    tag_compare_stage_ready_d,
    last_block_valid_1d,
    last_block_valid_0d,
@@ -143,8 +145,10 @@ module tag_read_stage
    input    [1:0]                                   delta_y_chma; //possible 0,1,2,3
    
    input       set_input_stage_valid;
+   input       is_req_read_in;
    input       last_block_valid_0d;
    output reg  dest_enable_wire_valid;
+   output reg  is_req_read_out;
    input       tag_compare_stage_ready_d;
    output reg  last_block_valid_1d;
 
@@ -326,6 +330,7 @@ always@(posedge clk) begin : TAG_READ_STATE
             if(tag_compare_stage_ready_d) begin
                if(set_input_stage_valid ) begin 
                   dest_enable_wire_valid <= 1;
+                  is_req_read_out        <= is_req_read_in;
                   last_block_valid_1d <= last_block_valid_0d;
 
                   curr_x_addr_reg     <= curr_x_addr;

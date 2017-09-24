@@ -5,7 +5,9 @@ module cache_set_input
    reset,
 
    valid_in,
+   is_req_read_in,
    set_input_stage_valid,
+   is_req_read_out,
    tag_compare_stage_ready,
    set_input_ready,
    
@@ -64,7 +66,9 @@ input                clk;
 input                reset;
 
 input                valid_in;
+input                is_req_read_in;
 output reg           set_input_stage_valid;
+output reg           is_req_read_out;
 input                tag_compare_stage_ready;
 output reg           set_input_ready;
 
@@ -261,6 +265,7 @@ always@(posedge clk) begin : SET_INPUT_STAGE
             STATE_IDLE: begin
                 if(~( ~tag_compare_stage_ready)) begin
                     if(valid_in) begin
+                        is_req_read_out <= is_req_read_in;
                         set_input_stage_valid <= 1;
                         curr_x <= 0;
                         curr_y <= 0;

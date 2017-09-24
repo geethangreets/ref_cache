@@ -9,6 +9,7 @@ module inter_cache_pipe_hit_pipe
     chma_ref_start_y_in 	,   // start y location of chroma 
 	ref_idx_in_in,      // default to zero (for current frame)
     valid_in,           // input valid
+    is_req_read,           // input valid
     cache_idle_out,         // 1 - cache is ready to accept new input
     
 
@@ -117,6 +118,7 @@ module inter_cache_pipe_hit_pipe
                 
     // inter prediction filter interface            
    input                                           valid_in; 
+   input                                           is_req_read; 
    output								           cache_valid_out;   // assuming cache_block_ready is single cylce 
    output										   cache_idle_out;
    input                                           filer_idle_in;
@@ -177,6 +179,7 @@ module inter_cache_pipe_hit_pipe
                
 // axi master interface  ------------------------------------------       
     output	 	[AXI_ADDR_WDTH-1:0]		                           ref_pix_axi_ar_addr;
+    wire	 	[AXI_ADDR_WDTH-1:0]		                           ref_pix_axi_aw_addr;
     wire 		[AXI_ADDR_WDTH-1:0]		                           ref_pix_axi_ar_addr_fifo_in;
     output wire [7:0]					                           ref_pix_axi_ar_len;
     output wire	[2:0]					                           ref_pix_axi_ar_size;
@@ -184,9 +187,7 @@ module inter_cache_pipe_hit_pipe
     output wire [2:0]					                           ref_pix_axi_ar_prot;
     output 							            	               ref_pix_axi_ar_valid;
 
-    wire							            	               ref_pix_axi_ar_fifo_empty;
-    wire							            	               ref_pix_axi_ar_fifo_full;
-    wire							            	               ref_pix_axi_ar_fifo_rd_en;
+
     input 								                           ref_pix_axi_ar_ready;
                 
     input		[AXI_CACHE_DATA_WDTH-1:0]		                   ref_pix_axi_r_data;
@@ -195,6 +196,15 @@ module inter_cache_pipe_hit_pipe
     input 								                           ref_pix_axi_r_last;
     input								                           ref_pix_axi_r_valid;
     output reg 							                           ref_pix_axi_r_ready;
+    
+    
+    wire							            	               ref_pix_axi_ar_fifo_empty;
+    wire							            	               ref_pix_axi_ar_fifo_full;
+    wire							            	               ref_pix_axi_ar_fifo_rd_en;
+    
+    wire							            	               ref_pix_axi_aw_fifo_empty;
+    wire							            	               ref_pix_axi_aw_fifo_full;
+    wire							            	               ref_pix_axi_aw_fifo_rd_en;
     
     // pipeline controlls
     wire set_input_stage_valid;
@@ -488,6 +498,11 @@ module inter_cache_pipe_hit_pipe
 	wire [4:0] mis_fifo_data_count;
 	wire [5:0] hit_fifo_data_count;
 		
+    wire is_req_read_core;
+    wire is_req_read_mis_in;
+    wire is_req_read_mis_out;
+    wire ref_pix_axi_ar_valid_fifo_in;
+    wire ref_pix_axi_aw_valid_fifo_in;
 
 `ifdef CACHE_TEST		
 	integer file_in;
@@ -574,7 +589,7 @@ module inter_cache_pipe_hit_pipe
         .FIFO_DATA_WIDTH(
 			AXI_ADDR_WDTH
 		)
-    ) miss_addr_fifo (
+    ) miss_raddr_fifo (
         .clk(clk), 
         .reset(reset), 
         .wr_en(ref_pix_axi_ar_valid_fifo_in), 
@@ -591,19 +606,42 @@ module inter_cache_pipe_hit_pipe
         .almost_full(),
         .full()
         );	
+        
+   geet_fifo_almost_full #(
+		.LOG2_FIFO_DEPTH(3),
+        .FIFO_DATA_WIDTH(
+			AXI_ADDR_WDTH
+		)
+    ) miss_waddr_fifo (
+        .clk(clk), 
+        .reset(reset), 
+        .wr_en(ref_pix_axi_aw_valid_fifo_in), 
+        .rd_en(ref_pix_axi_aw_fifo_rd_en), 
+        .d_in({
+			ref_pix_axi_ar_addr_fifo_in
+		}), 
+        .d_out({	
+			ref_pix_axi_aw_addr
+		}), 
+		// .d_empty(d_miss_elem_fifo_empty),
+        .empty(ref_pix_axi_aw_fifo_empty), 
+        .program_full(ref_pix_axi_aw_fifo_full),
+        .almost_full(),
+        .full()
+        );	
 		
 		
 	
        geet_fifo_almost_full #(
 		.LOG2_FIFO_DEPTH(MIS_FIFO_DEPTH),
-      .FIFO_DATA_WIDTH(2*4+ BLOCK_NUMBER_WIDTH +1+1+1+ C_N_WAY + CHMA_DIM_WDTH * 2 + CHMA_DIM_HIGT * 2 + LUMA_DIM_WDTH* 4 + SET_ADDR_WDTH  + C_L_H_SIZE + C_L_V_SIZE + C_L_H_SIZE_C + C_L_V_SIZE_C)
+      .FIFO_DATA_WIDTH(1+2*4+ BLOCK_NUMBER_WIDTH +1+1+1+ C_N_WAY + CHMA_DIM_WDTH * 2 + CHMA_DIM_HIGT * 2 + LUMA_DIM_WDTH* 4 + SET_ADDR_WDTH  + C_L_H_SIZE + C_L_V_SIZE + C_L_H_SIZE_C + C_L_V_SIZE_C)
       ) miss_elem_fifo (
         .clk(clk), 
         .reset(reset), 
         .wr_en(miss_elem_fifo_wr_en), 
         .rd_en(miss_elem_fifo_rd_en), 
         .d_in({
-
+         is_req_read_mis_in,   
          curr_x_2d    ,
          curr_y_2d    ,
          delta_x_2d   ,
@@ -631,7 +669,7 @@ module inter_cache_pipe_hit_pipe
 		
 		}), 
         .d_out({
-        
+         is_req_read_mis_out,
          curr_x_2d_read    ,
          curr_y_2d_read    ,
          delta_x_2d_read   ,
@@ -988,8 +1026,10 @@ cache_set_input cache_set_input_block
    .clk                       (clk                       ) ,
    .reset                     (reset                     ) ,
    
-   .valid_in                  (valid_in &   cache_idle_out               ) ,
+   .valid_in                  (valid_in &   cache_idle_out  ) ,
+   .is_req_read_in            (is_req_read                  ) ,
    .set_input_stage_valid     (set_input_stage_valid     ) ,
+   .is_req_read_out           (is_req_read_core          ) ,
    .tag_compare_stage_ready   (tag_compare_stage_ready   ) ,
    .set_input_ready           (set_input_ready           ) ,
    
@@ -1077,14 +1117,17 @@ core_tag_block
    .delta_y_chma                          (delta_y_chma                    ),
    
    .set_input_stage_valid                 (set_input_stage_valid           ),
+   .is_req_read_in                        (is_req_read_core                ),
    .last_block_valid_0d                   (last_block_valid_0d             ),
    
    .dest_enable_wire_valid                (dest_enable_wire_valid          ),
    .tag_compare_stage_ready               (tag_compare_stage_ready         ),
    .tag_compare_stage_ready_d             (tag_compare_stage_ready_d       ),
    .ref_pix_axi_ar_valid_fifo_in          (ref_pix_axi_ar_valid_fifo_in    ),
+   .ref_pix_axi_aw_valid_fifo_in          (ref_pix_axi_aw_valid_fifo_in    ),
    .ref_pix_axi_ar_addr_fifo_in           (ref_pix_axi_ar_addr_fifo_in     ),
    .set_addr_2d                           (set_addr_2d                     ),
+   .is_req_read_misq                      (is_req_read_mis_in              ),
    .miss_elem_fifo_wr_en                  (miss_elem_fifo_wr_en            ),
    .hit_elem_fifo_wr_en                   (hit_elem_fifo_wr_en             ),
    .last_block_valid_2d                   (last_block_valid_2d             ),

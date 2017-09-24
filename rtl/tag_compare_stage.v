@@ -4,6 +4,7 @@ module tag_compare_stage
 
    clk                           ,
    reset                         ,
+   is_req_read_in                ,
    dest_enable_wire_valid        ,
    last_block_valid_1d           ,
    is_hit                        ,
@@ -50,12 +51,14 @@ module tag_compare_stage
    tag_compare_stage_ready       ,
    tag_compare_stage_ready_d     ,
    ref_pix_axi_ar_valid_fifo_in  ,  
+   ref_pix_axi_aw_valid_fifo_in  ,  
    ref_pix_axi_ar_addr_fifo_in   ,
    set_addr_2d                   ,
    miss_elem_fifo_wr_en          ,
    hit_elem_fifo_wr_en           ,
    last_block_valid_2d           ,
    is_hit_d                      ,
+   is_req_read_out               ,
    block_number_3                ,
    set_idx_d                     ,
    tag_addr_d                    ,
@@ -95,6 +98,7 @@ module tag_compare_stage
    input                                                                clk;
    input                                                                reset;
    input                                                                dest_enable_wire_valid;
+   input                                                                is_req_read_in;
    input                                                                last_block_valid_1d;
    input                                                                is_hit;
    input   [C_N_WAY-1:0]                                                set_idx;
@@ -140,13 +144,15 @@ module tag_compare_stage
    
 	output reg                                                           tag_compare_stage_ready;
 	output reg                                                           tag_compare_stage_ready_d;
-   output reg							            		                     ref_pix_axi_ar_valid_fifo_in;  
+   output reg							            		             ref_pix_axi_ar_valid_fifo_in;  
+   output reg							            		             ref_pix_axi_aw_valid_fifo_in;  
    output reg [AXI_ADDR_WDTH-1:0]		                                 ref_pix_axi_ar_addr_fifo_in;
    output reg    [SET_ADDR_WDTH -1:0]                                   set_addr_2d;
    output reg                                                           miss_elem_fifo_wr_en;
    output reg                                                           hit_elem_fifo_wr_en;
    output reg                                                           last_block_valid_2d;
    output reg                                                           is_hit_d;
+   output reg                                                           is_req_read_out;
    output        [BLOCK_NUMBER_WIDTH-1:0]                               block_number_3;
    output reg    [C_N_WAY-1:0]                                          set_idx_d;
    output reg    [TAG_ADDR_WDTH-1:0]                                    tag_addr_d;
@@ -203,6 +209,7 @@ module tag_compare_stage
 always@(posedge clk) begin : TAG_COMPARE_STAGE
 	if(reset) begin
 		ref_pix_axi_ar_valid_fifo_in <= 0;
+		ref_pix_axi_aw_valid_fifo_in <= 0;
 		iu_idx_val <= 0;
 		iu_idx_row_val <= 0;
 		ref_idx_val <= 0;
@@ -212,36 +219,43 @@ always@(posedge clk) begin : TAG_COMPARE_STAGE
 		hit_elem_fifo_wr_en <= 0;
 		last_block_valid_2d <= 0;
 		block_number_3_a  <= 0;
-      block_number_3_a2 <= 0;
+        block_number_3_a2 <= 0;
 	end
 	else begin
 				miss_elem_fifo_wr_en <= 0;	
 				hit_elem_fifo_wr_en  <= 0;
 				ref_pix_axi_ar_valid_fifo_in <= 0;	
-				if(dest_enable_wire_valid & tag_compare_stage_ready_d) begin			
-               
+				ref_pix_axi_aw_valid_fifo_in <= 0;	
+				if(dest_enable_wire_valid & tag_compare_stage_ready_d) begin
 				
 					last_block_valid_2d  <= last_block_valid_1d;
-					is_hit_d       <= is_hit;
-					set_idx_d      <= set_idx;
-					set_addr_2d    <= set_addr_d;
-					tag_addr_d     <= tag_addr;
+
+					set_idx_d            <= set_idx;
+					set_addr_2d          <= set_addr_d;
+					tag_addr_d           <= tag_addr;
                
-               curr_x_2d            <= curr_x_d    ;
-               curr_y_2d            <= curr_y_d    ;               
-               delta_x_2d           <= delta_x_d   ;               
-               delta_y_2d           <= delta_y_d   ;
+                    is_req_read_out      <= is_req_read_in;
+                    curr_x_2d            <= curr_x_d    ;
+                    curr_y_2d            <= curr_y_d    ;               
+                    delta_x_2d           <= delta_x_d   ;               
+                    delta_y_2d           <= delta_y_d   ;
                
-               if((curr_x_d==delta_x_d) && (curr_y_d==delta_y_d)) begin
-                  block_number_3_a2 <= block_number_3_a2 + 1;
-               end
-               block_number_3_a <= block_number_3_a2;
-               // block_number_3_b2 <= block_number_3_b1;
-               // block_number_3_b1 <= last_block_valid_1d ? 0 : block_number_3_b1+1;
+                    if((curr_x_d==delta_x_d) && (curr_y_d==delta_y_d)) begin
+                        block_number_3_a2 <= block_number_3_a2 + 1;
+                    end
+                    block_number_3_a <= block_number_3_a2;
+                    // block_number_3_b2 <= block_number_3_b1;
+                    // block_number_3_b1 <= last_block_valid_1d ? 0 : block_number_3_b1+1;
                
-					if(!is_hit) begin
-                  
-						ref_pix_axi_ar_valid_fifo_in <= 1;
+					if((~is_hit) || (~is_req_read_in)) begin
+                    // in case of a write, treat as a miss regardless of the result of tag comparision
+                        is_hit_d    <= 0;
+                        if(is_req_read_in) begin
+                            ref_pix_axi_ar_valid_fifo_in <= 1;
+                        end
+                        else begin
+                            ref_pix_axi_aw_valid_fifo_in <= 1;
+                        end
 						miss_elem_fifo_wr_en <= 1;
                   
 						iu_idx_val <= iu_idx * `REF_PIX_IU_OFFSET;
@@ -252,31 +266,32 @@ always@(posedge clk) begin : TAG_COMPARE_STAGE
 						end
 						else begin
 							// bu_idx_val <= bu_idx * `REF_PIX_BU_OFFSET_OLD + bu_row_idx * `REF_PIX_BU_ROW_OFFSET;
-                     $stop;
-                     $display("depricated");
+                            $stop;
+                            $display("depricated");
 						end	
 						
 					end
 					else begin
+                        is_hit_d    <= 1;
 						hit_elem_fifo_wr_en <= 1;
 						ref_pix_axi_ar_valid_fifo_in <= 0;	
 					end
 					luma_dest_enable_reg <= luma_dest_enable_wire;
 					chma_dest_enable_reg <= chma_dest_enable_wire;			
 
-               cl_strt_x_luma_2d <= cl_strt_x_luma_d;
-               cl_strt_x_chma_2d <= cl_strt_x_chma_d;
-               cl_strt_y_luma_2d <= cl_strt_y_luma_d;
-               cl_strt_y_chma_2d <= cl_strt_y_chma_d;
-               dst_strt_x_luma_d <= dst_strt_x_luma;
-               dest_end_x_luma_d <= dest_end_x_luma;
-               dst_strt_y_luma_d <= dst_strt_y_luma;
-               dest_end_y_luma_d <= dest_end_y_luma;
-               
-               dst_strt_x_chma_d <= dst_strt_x_chma;
-               dest_end_x_chma_d <= dest_end_x_chma;
-               dst_strt_y_chma_d <= dst_strt_y_chma;
-               dest_end_y_chma_d <= dest_end_y_chma;
+                    cl_strt_x_luma_2d <= cl_strt_x_luma_d;
+                    cl_strt_x_chma_2d <= cl_strt_x_chma_d;
+                    cl_strt_y_luma_2d <= cl_strt_y_luma_d;
+                    cl_strt_y_chma_2d <= cl_strt_y_chma_d;
+                    dst_strt_x_luma_d <= dst_strt_x_luma;
+                    dest_end_x_luma_d <= dest_end_x_luma;
+                    dst_strt_y_luma_d <= dst_strt_y_luma;
+                    dest_end_y_luma_d <= dest_end_y_luma;
+
+                    dst_strt_x_chma_d <= dst_strt_x_chma;
+                    dest_end_x_chma_d <= dest_end_x_chma;
+                    dst_strt_y_chma_d <= dst_strt_y_chma;
+                    dest_end_y_chma_d <= dest_end_y_chma;
 						
 				end
 			

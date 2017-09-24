@@ -49,14 +49,17 @@ module cache_bank_core
    delta_y_chma,  
    
    set_input_stage_valid,
+   is_req_read_in,
    last_block_valid_0d,
    
    dest_enable_wire_valid,
    tag_compare_stage_ready,  
    tag_compare_stage_ready_d,  
    ref_pix_axi_ar_valid_fifo_in,  
+   ref_pix_axi_aw_valid_fifo_in,  
    ref_pix_axi_ar_addr_fifo_in,
    set_addr_2d,
+   is_req_read_misq,
    miss_elem_fifo_wr_en,
    hit_elem_fifo_wr_en,
    last_block_valid_2d,
@@ -158,13 +161,16 @@ module cache_bank_core
    input                                            op_conf_fifo_program_full ;
    
    input       set_input_stage_valid;
+   input       is_req_read_in;
    input       last_block_valid_0d;
    output                                                               dest_enable_wire_valid;   
-	output                                                               tag_compare_stage_ready;
-	output                                                               tag_compare_stage_ready_d;   
-   output reg							            		                     ref_pix_axi_ar_valid_fifo_in;  
-   output reg [AXI_ADDR_WDTH-1:0]		                                 ref_pix_axi_ar_addr_fifo_in;
+	output                                                              tag_compare_stage_ready;
+	output                                                              tag_compare_stage_ready_d;   
+   output reg							            		            ref_pix_axi_ar_valid_fifo_in;  
+   output reg							            		            ref_pix_axi_aw_valid_fifo_in;  
+   output reg [AXI_ADDR_WDTH-1:0]		                                ref_pix_axi_ar_addr_fifo_in;
    output reg    [SET_ADDR_WDTH -1:0]                                   set_addr_2d;
+   output reg                                                           is_req_read_misq;
    output reg                                                           miss_elem_fifo_wr_en;
    output reg                                                           hit_elem_fifo_wr_en;
    output reg                                                           last_block_valid_2d;
@@ -259,6 +265,9 @@ wire [1:0] curr_x_d  ;
 wire [1:0] curr_y_d  ;
 wire [1:0] delta_x_d ;
 wire [1:0] delta_y_d ;
+
+
+wire is_req_read_tag_read;
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -380,7 +389,9 @@ tag_read_stage tag_read_stage_block
    .reset                     (reset                     ),
    
    .dest_enable_wire_valid    (dest_enable_wire_valid    ),
+   .is_req_read_out           (is_req_read_tag_read      ),
    .set_input_stage_valid     (set_input_stage_valid     ),
+   .is_req_read_in            (is_req_read_in            ),
    .tag_compare_stage_ready_d (tag_compare_stage_ready_d ),
    .last_block_valid_1d       (last_block_valid_1d       ),
    .last_block_valid_0d       (last_block_valid_0d       ),
@@ -469,6 +480,7 @@ tag_compare_pipe_stage
    .clk                          (clk                          ) ,
    .reset                        (reset                        ) ,
    .dest_enable_wire_valid       (dest_enable_wire_valid       ) ,
+   .is_req_read_in               (is_req_read_tag_read         ) ,
    .last_block_valid_1d          (last_block_valid_1d          ) ,
    .is_hit                       (is_hit                       ) ,
    .set_idx                      (set_idx                      ) ,
@@ -514,12 +526,14 @@ tag_compare_pipe_stage
    .tag_compare_stage_ready      (tag_compare_stage_ready      ) ,
    .tag_compare_stage_ready_d    (tag_compare_stage_ready_d    ) ,
    .ref_pix_axi_ar_valid_fifo_in (ref_pix_axi_ar_valid_fifo_in ) ,  
+   .ref_pix_axi_aw_valid_fifo_in (ref_pix_axi_aw_valid_fifo_in ) ,  
    .ref_pix_axi_ar_addr_fifo_in  (ref_pix_axi_ar_addr_fifo_in  ) ,
    .set_addr_2d                  (set_addr_2d                  ) ,
    .miss_elem_fifo_wr_en         (miss_elem_fifo_wr_en         ) ,
    .hit_elem_fifo_wr_en          (hit_elem_fifo_wr_en          ) ,
    .last_block_valid_2d          (last_block_valid_2d          ) ,
    .is_hit_d                     (is_hit_d                     ) ,
+   .is_req_read_out              (is_req_read_misq             ) ,
    .block_number_3               (block_number_3               ) ,
    .set_idx_d                    (set_idx_d                    ) ,
    .tag_addr_d                   (tag_addr_d                   ) ,

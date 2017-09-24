@@ -163,6 +163,7 @@ inter_cache_pipe_hit_pipe cache_top
 //-------upstream interface------
 	.ref_idx_in_in                     (0)  ,      // default to zero (for current frame)
     .valid_in                          (valid_in)  ,           // upstream input valid
+    .is_req_read                       (1'b1)  ,           // read requests
     .cache_idle_out                    (cache_idle_out)  ,         // 1 - cache is ready to accept new input
 
     .pic_width                         (1920)  ,
