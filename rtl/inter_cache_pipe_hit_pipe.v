@@ -3,16 +3,17 @@ module inter_cache_pipe_hit_pipe
 (
     clk,
     reset,
+    
     luma_ref_start_x_in 	,   // start x location of luma 
-    luma_ref_start_y_in    ,    // start y location of luma 
+    luma_ref_start_y_in     ,    // start y location of luma 
     chma_ref_start_x_in 	,   // start x location of chroma 
     chma_ref_start_y_in 	,   // start y location of chroma 
-	ref_idx_in_in,      // default to zero (for current frame)
-    valid_in,           // input valid
-    is_req_read,           // input valid
+    ref_idx_in_in,              // default to zero (for current frame)
+    valid_in     ,             // input valid
+    is_req_read  ,              // input valid
+    wb_data_in   ,
     cache_idle_out,         // 1 - cache is ready to accept new input
     
-
     luma_ref_width_x_in   ,     //width of reference block in luma
     chma_ref_width_x_in   ,     //width of reference block in chroma
     luma_ref_height_y_in  ,     //height of reference block in luma
@@ -28,8 +29,7 @@ module inter_cache_pipe_hit_pipe
     luma_ref_height_y_out  ,    //block dimension output for reference
     chma_ref_height_y_out  ,    //block dimension output for reference
     
-	
-    block_x_offset_luma ,   // valid pixel starting location x direction in luma output
+	block_x_offset_luma ,   // valid pixel starting location x direction in luma output
     block_y_offset_luma ,   // valid pixel starting location y direction in luma output
     block_x_offset_chma ,   // valid pixel starting location x direction in chroma output
     block_y_offset_chma ,   // valid pixel starting location y direction in chroma output
@@ -38,37 +38,59 @@ module inter_cache_pipe_hit_pipe
     block_x_end_chma    ,   // valid pixel ending location x direction in chroma output
     block_y_end_chma    ,   // valid pixel ending location y direction in chroma output
 
-
-
-
-    pic_width,
-    pic_height,
-
-    ch_frac_x   ,       //optional default to zero
-    ch_frac_y   ,       //optional default to zero
-    ch_frac_x_out,      //optional 
-    ch_frac_y_out,      //optional
-
-
-    filer_idle_in,      // 1 means down stream module is ready to accept new data
-    luma_ref_block_out, // y reference block
-    cb_ref_block_out,   // cb reference block
-    cr_ref_block_out,   // cr reference block
-    cache_valid_out,    //1 - valid output
     
-    ref_pix_axi_ar_addr,
-    ref_pix_axi_ar_len,
-    ref_pix_axi_ar_size,
+
+
+    pic_width           ,
+    pic_height          ,
+
+    ch_frac_x           ,       //optional default to zero
+    ch_frac_y           ,       //optional default to zero
+    ch_frac_x_out       ,      //optional 
+    ch_frac_y_out       ,      //optional
+
+
+    filer_idle_in       ,      // 1 means down stream module is ready to accept new data
+    luma_ref_block_out  , // y reference block
+    cb_ref_block_out    ,   // cb reference block
+    cr_ref_block_out    ,   // cr reference block
+    cache_valid_out     ,    //1 - valid output
+    
+    ref_pix_axi_ar_addr ,
+    ref_pix_axi_ar_len  ,
+    ref_pix_axi_ar_size ,
     ref_pix_axi_ar_burst,
-    ref_pix_axi_ar_prot,
+    ref_pix_axi_ar_prot ,
     ref_pix_axi_ar_valid,
     ref_pix_axi_ar_ready,
-    ref_pix_axi_r_data,
-    ref_pix_axi_r_resp,
-    ref_pix_axi_r_last,
-    ref_pix_axi_r_valid,
+    ref_pix_axi_r_data  ,
+    ref_pix_axi_r_resp  ,
+    ref_pix_axi_r_last  ,
+    ref_pix_axi_r_valid ,
     ref_pix_axi_r_ready
-	
+    
+    ,ref_pix_axi_awid    
+    ,ref_pix_axi_awlen       
+    ,ref_pix_axi_awsize      
+    ,ref_pix_axi_awburst     
+    ,ref_pix_axi_awlock  
+    ,ref_pix_axi_awcache     
+    ,ref_pix_axi_awprot      
+    ,ref_pix_axi_awvalid	    
+    ,ref_pix_axi_awaddr	    
+    ,ref_pix_axi_awready	    
+        
+    ,ref_pix_axi_wstrb	    
+    ,ref_pix_axi_wlast	    
+    ,ref_pix_axi_wvalid	    
+    ,ref_pix_axi_wdata	    
+    ,ref_pix_axi_wready	    
+        
+    ,ref_pix_axi_bid		    
+    ,ref_pix_axi_bresp	    
+    ,ref_pix_axi_bvalid	    
+    ,ref_pix_axi_bready	    
+    
 	,cache_full_idle    // asserts when all blocks in cache is fully idle
 
 
@@ -119,6 +141,8 @@ module inter_cache_pipe_hit_pipe
     // inter prediction filter interface            
    input                                           valid_in; 
    input                                           is_req_read; 
+   input [YY_WIDTH+CH_WIDTH*2-1:0]                 wb_data_in;
+   wire  [YY_WIDTH+CH_WIDTH*2-1:0]                 wb_data_read;
    output								           cache_valid_out;   // assuming cache_block_ready is single cylce 
    output										   cache_idle_out;
    input                                           filer_idle_in;
@@ -131,20 +155,20 @@ module inter_cache_pipe_hit_pipe
 	input  signed [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0] 	chma_ref_start_x_in;	
 	input  signed [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0] 	chma_ref_start_y_in;	
 	
-	input  [LUMA_DIM_WDTH - 1:0]   			               chma_ref_width_x_in            ;	
-    input  [LUMA_DIM_WDTH - 1:0]                           chma_ref_height_y_in           ;   
-	input  [LUMA_DIM_WDTH - 1:0]   			               luma_ref_width_x_in            ;	
-    input  [LUMA_DIM_WDTH - 1:0]                           luma_ref_height_y_in           ;  
+	input  [LUMA_DIM_WDTH - 1:0]   			                chma_ref_width_x_in            ;	
+    input  [LUMA_DIM_WDTH - 1:0]                            chma_ref_height_y_in           ;   
+	input  [LUMA_DIM_WDTH - 1:0]   			                luma_ref_width_x_in            ;	
+    input  [LUMA_DIM_WDTH - 1:0]                            luma_ref_height_y_in           ;  
 
-    output  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]       luma_ref_start_x_out   ;
-    output  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]       luma_ref_start_y_out   ;
-    output  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]       chma_ref_start_x_out   ;
-    output  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]       chma_ref_start_y_out   ;
+    output  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]         luma_ref_start_x_out   ;
+    output  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]         luma_ref_start_y_out   ;
+    output  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]         chma_ref_start_x_out   ;
+    output  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]         chma_ref_start_y_out   ;
    
-   output   [LUMA_DIM_WDTH - 1:0]                        chma_ref_width_x_out   ;
-   output   [LUMA_DIM_WDTH - 1:0]                        chma_ref_height_y_out  ;
-   output   [LUMA_DIM_WDTH - 1:0]                        luma_ref_width_x_out   ;
-   output   [LUMA_DIM_WDTH - 1:0]                        luma_ref_height_y_out  ;
+   output   [LUMA_DIM_WDTH - 1:0]                           chma_ref_width_x_out   ;
+   output   [LUMA_DIM_WDTH - 1:0]                           chma_ref_height_y_out  ;
+   output   [LUMA_DIM_WDTH - 1:0]                           luma_ref_width_x_out   ;
+   output   [LUMA_DIM_WDTH - 1:0]                           luma_ref_height_y_out  ;
 
 
    input    [MV_C_FRAC_WIDTH_HIGH -1:0]                  ch_frac_x;
@@ -152,7 +176,7 @@ module inter_cache_pipe_hit_pipe
    output   [MV_C_FRAC_WIDTH_HIGH -1:0]                  ch_frac_x_out;
    output   [MV_C_FRAC_WIDTH_HIGH -1:0]                  ch_frac_y_out; 
    
-   input			[REF_ADDR_WDTH-1:0]		                  ref_idx_in_in;
+   input			[REF_ADDR_WDTH-1:0]		             ref_idx_in_in;
 	
    input  signed [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]   pic_width;   
    input  signed [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]   pic_height;   
@@ -178,34 +202,55 @@ module inter_cache_pipe_hit_pipe
 
                
 // axi master interface  ------------------------------------------       
-    output	 	[AXI_ADDR_WDTH-1:0]		                           ref_pix_axi_ar_addr;
-    wire	 	[AXI_ADDR_WDTH-1:0]		                           ref_pix_axi_aw_addr;
-    wire 		[AXI_ADDR_WDTH-1:0]		                           ref_pix_axi_ar_addr_fifo_in;
-    output wire [7:0]					                           ref_pix_axi_ar_len;
-    output wire	[2:0]					                           ref_pix_axi_ar_size;
-    output wire [1:0]					                           ref_pix_axi_ar_burst;
-    output wire [2:0]					                           ref_pix_axi_ar_prot;
-    output 							            	               ref_pix_axi_ar_valid;
-
-
-    input 								                           ref_pix_axi_ar_ready;
-                
-    input		[AXI_CACHE_DATA_WDTH-1:0]		                   ref_pix_axi_r_data;
-
-    input		[1:0]					                           ref_pix_axi_r_resp;
-    input 								                           ref_pix_axi_r_last;
-    input								                           ref_pix_axi_r_valid;
-    output reg 							                           ref_pix_axi_r_ready;
+    output      [AXI_ADDR_WDTH-1:0]                                 ref_pix_axi_ar_addr;
+    wire        [AXI_ADDR_WDTH-1:0]                                 ref_pix_axi_ar_addr_fifo_in;
+    output wire [7:0]                                               ref_pix_axi_ar_len;
+    output wire [2:0]                                               ref_pix_axi_ar_size;
+    output wire [1:0]                                               ref_pix_axi_ar_burst;
+    output wire [2:0]                                               ref_pix_axi_ar_prot;
+    output                                                          ref_pix_axi_ar_valid;
+    input 								                            ref_pix_axi_ar_ready;
+    input       [AXI_CACHE_DATA_WDTH-1:0]                           ref_pix_axi_r_data;
+    input       [1:0]                                               ref_pix_axi_r_resp;
+    input                                                           ref_pix_axi_r_last;
+    input                                                           ref_pix_axi_r_valid;
+    output reg                                                      ref_pix_axi_r_ready;
+    wire							            	                ref_pix_axi_ar_fifo_empty;
+    wire							            	                ref_pix_axi_ar_fifo_full;
+    wire							            	                ref_pix_axi_ar_fifo_rd_en;
     
+    output                                                          ref_pix_axi_awid    ;
+    output      [7:0]                                               ref_pix_axi_awlen   ;
+    output      [2:0]                                               ref_pix_axi_awsize  ;
+    output      [1:0]                                               ref_pix_axi_awburst ;
+    output                        	                                ref_pix_axi_awlock  ;
+    output      [3:0]                                               ref_pix_axi_awcache ;
+    output      [2:0]                                               ref_pix_axi_awprot  ;
+    output                                                          ref_pix_axi_awvalid	;
+    output      [AXI_ADDR_WDTH-1:0]                                 ref_pix_axi_awaddr	;
+    input                         	                                ref_pix_axi_awready	;
+    // write data channel
+    output      [AXI_CACHE_DATA_WDTH/8-1:0]	                        ref_pix_axi_wstrb	;
+    output                                     	                    ref_pix_axi_wlast	;
+    output                                     	                    ref_pix_axi_wvalid	;
+    output      [AXI_CACHE_DATA_WDTH -1:0]	                        ref_pix_axi_wdata	;
+    input	                                                        ref_pix_axi_wready	;
+    //write response channel
+    input                       	                                ref_pix_axi_bid		;
+    input       [1:0]                                               ref_pix_axi_bresp	;
+    input                       	                                ref_pix_axi_bvalid	;
+    output                                                          ref_pix_axi_bready	;  
     
-    wire							            	               ref_pix_axi_ar_fifo_empty;
-    wire							            	               ref_pix_axi_ar_fifo_full;
-    wire							            	               ref_pix_axi_ar_fifo_rd_en;
-    
-    wire							            	               ref_pix_axi_aw_fifo_empty;
-    wire							            	               ref_pix_axi_aw_fifo_full;
-    wire							            	               ref_pix_axi_aw_fifo_rd_en;
-    
+    wire							            	                ref_pix_axi_aw_fifo_empty;
+    wire							            	                ref_pix_axi_aw_fifo_full ;
+    wire							            	                ref_pix_axi_aw_fifo_rd_en;
+    wire							            	                wb_data_fifo_empty;
+    wire							            	                wb_data_fifo_full ;
+    wire							            	                wb_data_fifo_rd_en;
+    wire							            	                wb_data_dwnstr_fifo_empty;
+    wire							            	                wb_data_dwnstr_fifo_full ;
+    wire							            	                wb_data_dwnstr_rd_en ;
+    wire		[YY_WIDTH+CH_WIDTH*2-1:0]					        wb_data_dwn_str_rdat;
     // pipeline controlls
     wire set_input_stage_valid;
     wire set_input_ready;
@@ -292,7 +337,7 @@ module inter_cache_pipe_hit_pipe
     reg     [SET_ADDR_WDTH+C_N_WAY-1:0]             cache_w_addr;
     reg     [SET_ADDR_WDTH+C_N_WAY-1:0]             cache_r_addr;
     reg     [SET_ADDR_WDTH+C_N_WAY-1:0]             cache_addr;
-    wire    [BIT_DEPTH*CACHE_LINE_WDTH-1:0]        cache_rdata;
+    wire    [BIT_DEPTH*CACHE_LINE_WDTH-1:0]         cache_rdata;
     reg                                             cache_wr_en;
 
     wire     luma_dest_enable_reg;
@@ -356,20 +401,19 @@ module inter_cache_pipe_hit_pipe
 
     reg   [C_L_H_SIZE -1:0] 						          dest_fill_x_loc_luma_arry_d[LUMA_REF_BLOCK_WIDTH -1:0];
     reg   [C_L_V_SIZE -1:0] 						          dest_fill_y_loc_luma_arry_d[LUMA_REF_BLOCK_WIDTH -1:0];
-    reg   [C_L_V_SIZE + C_L_H_SIZE-1:0] 	             dest_fill_xy_loc_luma_d[0:LUMA_REF_BLOCK_WIDTH -1][0:LUMA_REF_BLOCK_WIDTH -1];
+    reg   [C_L_V_SIZE + C_L_H_SIZE-1:0] 	                  dest_fill_xy_loc_luma_d[0:LUMA_REF_BLOCK_WIDTH -1][0:LUMA_REF_BLOCK_WIDTH -1];
 
-
-	
-    reg   [LUMA_REF_BLOCK_WIDTH -1:0]                  dest_fill_x_mask_luma_d;
-    reg   [LUMA_REF_BLOCK_WIDTH -1:0]                  dest_fill_y_mask_luma_d;
+    
+    reg   [LUMA_REF_BLOCK_WIDTH -1:0]                        dest_fill_x_mask_luma_d;
+    reg   [LUMA_REF_BLOCK_WIDTH -1:0]                        dest_fill_y_mask_luma_d;
 
     reg   [C_L_H_SIZE_C -1:0] 								 dest_fill_x_loc_chma_arry_d[CHMA_REF_BLOCK_WIDTH -1:0];
     reg   [C_L_V_SIZE_C -1:0] 								 dest_fill_y_loc_chma_arry_d[CHMA_REF_BLOCK_HIGHT -1:0];
     reg   [C_L_V_SIZE_C + C_L_H_SIZE_C-1:0] 				 dest_fill_xy_loc_chma_d[0:CHMA_REF_BLOCK_HIGHT -1][0:CHMA_REF_BLOCK_WIDTH -1];
 	
 
-    reg     [CHMA_REF_BLOCK_WIDTH -1:0]                dest_fill_x_mask_chma_d		;
-    reg     [CHMA_REF_BLOCK_HIGHT -1:0]                dest_fill_y_mask_chma_d		;
+    reg     [CHMA_REF_BLOCK_WIDTH -1:0]                      dest_fill_x_mask_chma_d		;
+    reg     [CHMA_REF_BLOCK_HIGHT -1:0]                      dest_fill_y_mask_chma_d		;
 
     reg  [BIT_DEPTH-1:0]     block_11x11 [0:LUMA_REF_BLOCK_WIDTH -1][0:LUMA_REF_BLOCK_WIDTH -1];
     
@@ -377,13 +421,13 @@ module inter_cache_pipe_hit_pipe
     reg  [BIT_DEPTH-1:0]     block_5x5_cr[0:CHMA_REF_BLOCK_HIGHT -1][0:CHMA_REF_BLOCK_WIDTH -1];
 
     wire [BIT_DEPTH-1:0] cache_w_data_arr_luma [CACHE_LINE_WDTH-1:0];
-    wire [BIT_DEPTH-1:0] cache_w_data_arr_cb [CACHE_LINE_WDTH/(C_SUB_WIDTH*C_SUB_HEIGHT)-1:0];
-    wire [BIT_DEPTH-1:0] cache_w_data_arr_cr [CACHE_LINE_WDTH/(C_SUB_WIDTH*C_SUB_HEIGHT)-1:0];
+    wire [BIT_DEPTH-1:0] cache_w_data_arr_cb   [CACHE_LINE_WDTH/(C_SUB_WIDTH*C_SUB_HEIGHT)-1:0];
+    wire [BIT_DEPTH-1:0] cache_w_data_arr_cr   [CACHE_LINE_WDTH/(C_SUB_WIDTH*C_SUB_HEIGHT)-1:0];
 	
-    wire [BIT_DEPTH-1:0] cache_rdata_arr    [(BIT_DEPTH*CACHE_LINE_WDTH/BIT_DEPTH)-1:0];
+    wire [BIT_DEPTH-1:0] cache_rdata_arr      [(BIT_DEPTH*CACHE_LINE_WDTH/BIT_DEPTH)-1:0];
     wire [BIT_DEPTH-1:0] cache_rdata_arr_luma [CACHE_LINE_WDTH-1:0];
-    wire [BIT_DEPTH-1:0] cache_rdata_arr_cb [CACHE_LINE_WDTH/(C_SUB_WIDTH*C_SUB_HEIGHT)-1:0];
-    wire [BIT_DEPTH-1:0] cache_rdata_arr_cr [CACHE_LINE_WDTH/(C_SUB_WIDTH*C_SUB_HEIGHT)-1:0];
+    wire [BIT_DEPTH-1:0] cache_rdata_arr_cb   [CACHE_LINE_WDTH/(C_SUB_WIDTH*C_SUB_HEIGHT)-1:0];
+    wire [BIT_DEPTH-1:0] cache_rdata_arr_cr   [CACHE_LINE_WDTH/(C_SUB_WIDTH*C_SUB_HEIGHT)-1:0];
 
 	
 	wire		[CACHE_LINE_WDTH*BIT_DEPTH -1:0]		    cache_w_port;
@@ -393,18 +437,18 @@ module inter_cache_pipe_hit_pipe
 	reg 		[(CACHE_LINE_WDTH*BIT_DEPTH + (((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]		    cache_w_port_old3_reg;
 	reg 		[(CACHE_LINE_WDTH*BIT_DEPTH + (((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]		    cache_w_port_old4_reg;
 
-	wire miss_elem_fifo_empty;
-	wire  hit_elem_fifo_empty;
+	wire    miss_elem_fifo_empty;
+	wire    hit_elem_fifo_empty;
 	// wire d_miss_elem_fifo_empty;
 	// wire  d_hit_elem_fifo_empty;
-	wire miss_elem_fifo_full;
-	wire  hit_elem_fifo_full;
-	wire  miss_elem_fifo_wr_en;
-	reg  miss_elem_fifo_wr_en_d;
-	reg  miss_elem_fifo_wr_en_2d;
-	wire hit_elem_fifo_wr_en;
-	reg hit_elem_fifo_wr_en_d;
-	reg hit_elem_fifo_wr_en_2d;
+	wire    miss_elem_fifo_full;
+	wire    hit_elem_fifo_full;
+	wire    miss_elem_fifo_wr_en;
+	reg     miss_elem_fifo_wr_en_d;
+	reg     miss_elem_fifo_wr_en_2d;
+	wire    hit_elem_fifo_wr_en;
+	reg     hit_elem_fifo_wr_en_d;
+	reg     hit_elem_fifo_wr_en_2d;
 	
 
 	
@@ -492,12 +536,12 @@ module inter_cache_pipe_hit_pipe
 	(* mark_debug = "true" *)  wire [BLOCK_NUMBER_WIDTH-1:0] block_number_3;
 	(* mark_debug = "true" *)  wire [BLOCK_NUMBER_WIDTH-1:0] block_number_3_hit;
 	(* mark_debug = "true" *)  wire [BLOCK_NUMBER_WIDTH-1:0] block_number_3_read;
-	(* mark_debug = "true" *)  reg [BLOCK_NUMBER_WIDTH-1:0] block_number_4;
+	(* mark_debug = "true" *)  reg [BLOCK_NUMBER_WIDTH-1:0]  block_number_4;
 	
 	wire [4:0] output_fifo_data_count;
 	wire [4:0] mis_fifo_data_count;
 	wire [5:0] hit_fifo_data_count;
-		
+
     wire is_req_read_core;
     wire is_req_read_mis_in;
     wire is_req_read_mis_out;
@@ -526,23 +570,64 @@ module inter_cache_pipe_hit_pipe
 	
 
 
-   wire [YY_WIDTH-1:0] yy_pixels_8x8;
-   parameter Y_DIV_WIDTH = YY_WIDTH/CL_AXI_DIV_FAC;
-   parameter CB_DIV_WIDTH = CH_WIDTH/CL_AXI_DIV_FAC;
+    wire [YY_WIDTH-1:0] yy_pixels_8x8;
+    parameter Y_DIV_WIDTH = YY_WIDTH/CL_AXI_DIV_FAC;
+    parameter CB_DIV_WIDTH = CH_WIDTH/CL_AXI_DIV_FAC;
 		
-	assign ref_pix_axi_ar_fifo_rd_en = ref_pix_axi_ar_ready & ref_pix_axi_ar_valid;
-	assign ref_pix_axi_ar_valid = !ref_pix_axi_ar_fifo_empty;
-	assign cache_valid_out = !output_fifo_empty & filer_idle_in;
-	assign block_ready_internal = block_ready_reg ;
+	assign ref_pix_axi_ar_fifo_rd_en    = ref_pix_axi_ar_ready & ref_pix_axi_ar_valid;
+	assign ref_pix_axi_ar_valid         = !ref_pix_axi_ar_fifo_empty;
+	assign ref_pix_axi_aw_fifo_rd_en    = ref_pix_axi_awready & ref_pix_axi_awvalid;
+	assign ref_pix_axi_awvalid          = !ref_pix_axi_aw_fifo_empty;
+	assign cache_valid_out              = !output_fifo_empty & filer_idle_in;
+	assign block_ready_internal         = block_ready_reg ;
    
-   assign cache_w_port = {yy_pixels_8x8}; 
+    assign cache_w_port = (wb_data_dwnstr_rd_en) ?  (wb_data_dwn_str_rdat[YY_WIDTH-1:0]) : (yy_pixels_8x8) ; 
 
 		
-   assign                  ref_pix_axi_ar_size   = `AX_SIZE_64;
-   assign                  ref_pix_axi_ar_len    = (CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH;
+    assign                  ref_pix_axi_ar_size   = `AX_SIZE_64;
+    assign                  ref_pix_axi_ar_len    = (CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH;
 
+    assign                  ref_pix_axi_aw_size   = `AX_SIZE_64;
+    assign                  ref_pix_axi_aw_len    = (CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH;
+    assign                  ref_pix_axi_w_strb    = {(AXI_CACHE_DATA_WDTH/8){1'b1}};
 
-
+ref_buf_to_axi_write_master
+#(
+    .SKIP_ADDR_PHASE(1)
+)
+cache_wb_blk
+(
+    .clk                 (clk                     )       ,
+    .reset               (reset                   )       ,
+	//fifo interface      
+	.fifo_is_empty_in    (wb_data_fifo_empty      )       ,
+	.fifo_rd_en_out	     (wb_data_fifo_rd_en      )       ,
+	.fifo_data_in	     (wb_data_read            )       ,   
+	.dpb_axi_addr_in     (0                       )       ,
+    .pic_width_in        (pic_width               )       ,
+    .pic_height_in       (pic_height              )       ,
+    //axi interface
+    .axi_awid            (ref_pix_axi_awid     )       ,   
+    .axi_awlen           (ref_pix_axi_awlen    )       ,   
+    .axi_awsize          (ref_pix_axi_awsize   )       ,   
+    .axi_awburst         (ref_pix_axi_awburst  )       ,   
+    .axi_awlock          (ref_pix_axi_awlock   )       ,   
+    .axi_awcache         (ref_pix_axi_awcache  )       ,   
+    .axi_awprot          (ref_pix_axi_awprot   )       ,   
+    .axi_awvalid         (ref_pix_axi_awvalid  )       ,
+    .axi_awaddr          (ref_pix_axi_awaddr   )       ,
+    .axi_awready         (ref_pix_axi_awready  )       ,
+    .axi_wstrb           (ref_pix_axi_wstrb    )       ,
+    .axi_wlast           (ref_pix_axi_wlast    )       ,
+    .axi_wvalid          (ref_pix_axi_wvalid   )       ,
+    .axi_wdata           (ref_pix_axi_wdata    )       ,
+    .axi_wready          (ref_pix_axi_wready   )       ,
+    .axi_bid             (ref_pix_axi_bid      )       ,
+    .axi_bresp           (ref_pix_axi_bresp    )       ,
+    .axi_bvalid          (ref_pix_axi_bvalid   )       ,
+    .axi_bready          (ref_pix_axi_bready   )
+);
+    
 
     num_val_clines_generator num_val_clines_block_luma (
     .start_x_in(start_x_in[C_L_H_SIZE+LUMA_DIM_WDTH-1:0]), 
@@ -849,7 +934,7 @@ module inter_cache_pipe_hit_pipe
       .full(op_conf_fifo_full),
 		.almost_full(op_conf_fifo_almost_full_only),
 		.program_full(op_conf_fifo_program_full),
-      .empty(op_conf_fifo_empty)
+        .empty(op_conf_fifo_empty)
         );	
         
       assign   op_conf_fifo_almost_full = op_conf_fifo_almost_full_only | op_conf_fifo_full;
@@ -903,6 +988,37 @@ module inter_cache_pipe_hit_pipe
         .full()
         );	
         
+    geet_fifo_almost_full #(
+		.LOG2_FIFO_DEPTH(7),
+        .FIFO_DATA_WIDTH( YY_WIDTH+CH_WIDTH*2 )
+    ) wb_data_buffer_upstr (
+        .clk(clk), 
+        .reset(reset), 
+        .wr_en((valid_in &  (~is_req_read))), 
+        .rd_en(wb_data_fifo_rd_en), 
+        .d_in({wb_data_in}),
+        .d_out({ wb_data_read }),
+        .empty(wb_data_fifo_empty), 
+        .full( ),
+        .almost_full(wb_data_fifo_full),
+        .program_full()
+        );	
+    
+    geet_fifo_almost_full #(
+		.LOG2_FIFO_DEPTH(7),
+        .FIFO_DATA_WIDTH( YY_WIDTH+CH_WIDTH*2 )
+    ) wb_data_buffer_dwnstr (
+        .clk(clk), 
+        .reset(reset), 
+        .wr_en((wb_data_fifo_rd_en)), 
+        .rd_en(), 
+        .d_in({wb_data_read}),
+        .d_out({ wb_data_dwn_str_rdat }),
+        .empty(wb_data_dwnstr_fifo_empty), 
+        .full( ),
+        .almost_full(wb_data_dwnstr_fifo_full),
+        .program_full()
+        );	
      
 	assign output_fifo_program_full = output_fifo_almost_full_only | output_fifo_full | op_luma_program_full;		  
 
@@ -910,7 +1026,10 @@ module inter_cache_pipe_hit_pipe
 	assign cache_full_idle = hit_elem_fifo_empty & miss_elem_fifo_empty & output_fifo_empty                       & !block_ready_reg_d  & !data_read_stage_valid & !hit_elem_fifo_wr_en_d & !miss_elem_fifo_wr_en_d & !hit_elem_fifo_wr_en_2d & !miss_elem_fifo_wr_en_2d & !hit_elem_fifo_rd_en & !hit_elem_fifo_rd_en_d & !hit_elem_fifo_rd_en_2d & !miss_elem_fifo_rd_en & !miss_elem_fifo_rd_en_d & !miss_elem_fifo_rd_en_2d & (~set_input_stage_valid);
 
    assign                  ref_pix_axi_ar_burst  = `AX_BURST_INC;
-   assign                  ref_pix_axi_ar_prot   = `AX_PROT_DATA;    
+   assign                  ref_pix_axi_ar_prot   = `AX_PROT_DATA;   
+   assign                  ref_pix_axi_aw_burst  = `AX_BURST_INC;
+   assign                  ref_pix_axi_aw_prot   = `AX_PROT_DATA; 
+   
     always@(posedge clk) begin
       hit_elem_fifo_wr_en_d <= hit_elem_fifo_wr_en;
       miss_elem_fifo_wr_en_d <= miss_elem_fifo_wr_en;
@@ -933,10 +1052,20 @@ module inter_cache_pipe_hit_pipe
 					ref_pix_axi_r_ready = 0;
 				end
 				else begin
-					ref_pix_axi_r_ready = 1;
+                    if(wb_data_dwnstr_rd_en) begin
+                        ref_pix_axi_r_ready = 0;
+                    end
+                    else begin
+                        ref_pix_axi_r_ready = 1;
+                    end
 				end
 			end else begin
-				ref_pix_axi_r_ready = 1;
+                if(wb_data_dwnstr_rd_en) begin
+                    ref_pix_axi_r_ready = 0;
+                end
+                else begin
+                    ref_pix_axi_r_ready = 1;
+                end
 			end
 		end
 	end
@@ -950,6 +1079,7 @@ module inter_cache_pipe_hit_pipe
 	assign cache_idle_out =  tag_compare_stage_ready & 
                               ~miss_elem_fifo_full &  ~ref_pix_axi_ar_fifo_full 
 							 // (!set_input_stage_valid		)&(!dest_enable_wire_valid    )&(!tag_compare_stage_valid   );
+                             & ~wb_data_fifo_full
 							  & (set_input_ready) ;//& (!set_input_stage_valid		);//&(!dest_enable_wire_valid    ); 
 
 
@@ -1373,40 +1503,40 @@ end
 always@(posedge clk) begin
 	if(reset) begin
 		data_read_stage_valid <= 0;
-      data_read_hit_valid  <= 0;
-      data_read_mis_valid  <= 0;
+        data_read_hit_valid  <= 0;
+        data_read_mis_valid  <= 0;
 		block_number_4       <= 0;
-      curr_x_4             <= 0;
-      curr_y_4             <= 0;  
+        curr_x_4             <= 0;
+        curr_y_4             <= 0;  
 	end
 	else begin
-      data_read_mis_valid <= 0;
-      data_read_hit_valid <= 0;
-      data_read_stage_valid <= 0;
-      if(!output_fifo_program_full ) begin
-				if((!hit_elem_fifo_empty) & (block_number_4 == block_number_3_hit) & (curr_x_4 == curr_x_2d_hit) & (curr_y_4 == curr_y_2d_hit)) begin                  
+        data_read_mis_valid <= 0;
+        data_read_hit_valid <= 0;
+        data_read_stage_valid <= 0;
+        if(!output_fifo_program_full ) begin
+            if((!hit_elem_fifo_empty) & (block_number_4 == block_number_3_hit) & (curr_x_4 == curr_x_2d_hit) & (curr_y_4 == curr_y_2d_hit)) begin                  
 
-                  if((curr_x_4 == delta_x_2d_hit) && (curr_y_4 == delta_y_2d_hit)) begin
-                     last_block_valid_3d <= 1;
-                     curr_x_4 <= 0;
-                     curr_y_4 <= 0;
-                     block_number_4 <= block_number_4 + 1;
-                  end
-                  else begin
-                     last_block_valid_3d <= 0;
-                     curr_x_4 <= next_curr_x_4_hit;
-                     curr_y_4 <= next_curr_y_4_hit;
-                  end
-                  data_read_stage_valid <= 1;
-                  data_read_hit_valid <= 1;
+                if((curr_x_4 == delta_x_2d_hit) && (curr_y_4 == delta_y_2d_hit)) begin
+                    last_block_valid_3d <= 1;
+                    curr_x_4 <= 0;
+                    curr_y_4 <= 0;
+                    block_number_4 <= block_number_4 + 1;
+                end
+                else begin
+                    last_block_valid_3d <= 0;
+                    curr_x_4 <= next_curr_x_4_hit;
+                    curr_y_4 <= next_curr_y_4_hit;
+                end
+                    data_read_stage_valid <= 1;
+                    data_read_hit_valid <= 1;
 
-						luma_dest_enable_reg_d <= luma_dest_enable_reg_hit;
-						chma_dest_enable_reg_d <= chma_dest_enable_reg_hit;
+                    luma_dest_enable_reg_d <= luma_dest_enable_reg_hit;
+                    chma_dest_enable_reg_d <= chma_dest_enable_reg_hit;
 						
-				end
-				else if((!miss_elem_fifo_empty) & (block_number_4 == block_number_3_read) & (curr_x_4 == curr_x_2d_read) & (curr_y_4 == curr_y_2d_read) & (ref_pix_axi_r_valid & ref_pix_axi_r_ready & ref_pix_axi_r_last ))begin
-               data_read_stage_valid <= 1;
-                  if((curr_x_4 == delta_x_2d_read) && (curr_y_4 == delta_y_2d_read)) begin
+            end
+            else if((!miss_elem_fifo_empty) & (block_number_4 == block_number_3_read) & (curr_x_4 == curr_x_2d_read) & (curr_y_4 == curr_y_2d_read) & (ref_pix_axi_r_valid & ref_pix_axi_r_ready & ref_pix_axi_r_last ))begin
+                    data_read_stage_valid <= 1;
+                    if((curr_x_4 == delta_x_2d_read) && (curr_y_4 == delta_y_2d_read)) begin
                      last_block_valid_3d <= 1;
                      curr_x_4 <= 0;
                      curr_y_4 <= 0;
@@ -1417,11 +1547,11 @@ always@(posedge clk) begin
                      curr_x_4 <= next_curr_x_4_read;
                      curr_y_4 <= next_curr_y_4_read;
                   end
-               data_read_mis_valid <= 1;
-               luma_dest_enable_reg_d <= luma_dest_enable_reg_read;
-               chma_dest_enable_reg_d <= chma_dest_enable_reg_read;
-				end
-      end
+                data_read_mis_valid <= 1;
+                luma_dest_enable_reg_d <= luma_dest_enable_reg_read;
+                chma_dest_enable_reg_d <= chma_dest_enable_reg_read;
+            end
+        end
 		
 	end
 end
@@ -1436,20 +1566,20 @@ end
 // end
 
 always@(posedge clk) begin
-   if( (ref_pix_axi_r_valid & ref_pix_axi_r_ready & ref_pix_axi_r_last ))begin
-      cache_w_port_d <= cache_w_port;
-   end
+    if( (ref_pix_axi_r_valid & ref_pix_axi_r_ready & ref_pix_axi_r_last ) | 
+        wb_data_dwnstr_rd_en)begin
+        cache_w_port_d <= cache_w_port;
+    end
 end
 
 
 always@(*) begin
     cache_wr_en = 0;
     cache_addr = {set_addr_hit,set_idx_hit};
-	if(ref_pix_axi_r_valid & ref_pix_axi_r_ready) begin
-		if(ref_pix_axi_r_last) begin
-			cache_wr_en = 1;
-			cache_addr = {set_addr_read,set_idx_miss_read};	
-		end	
+	if((ref_pix_axi_r_valid & ref_pix_axi_r_ready & ref_pix_axi_r_last) | wb_data_dwnstr_rd_en
+        )begin
+        cache_wr_en = 1;
+        cache_addr = {set_addr_read,set_idx_miss_read};	
 	end	
 end
 
@@ -1468,29 +1598,35 @@ always@(*) begin
 	// cache_r_addr = {(SET_ADDR_WDTH+C_N_WAY) {1'bx}};
 	hit_elem_fifo_rd_en = 0;
 	if(!output_fifo_program_full ) begin
-			if((!hit_elem_fifo_empty) & (block_number_4 == block_number_3_hit) & (curr_x_4 == curr_x_2d_hit) & (curr_y_4 == curr_y_2d_hit)) begin
+        if((!hit_elem_fifo_empty) & (block_number_4 == block_number_3_hit) & (curr_x_4 == curr_x_2d_hit) & (curr_y_4 == curr_y_2d_hit)) begin
             hit_elem_fifo_rd_en = 1;
-			end
-   end
+        end
+    end
 end	
 
 
 always@(*) begin
 	miss_elem_fifo_rd_en = 0;
-   if(!output_fifo_program_full ) begin
-      if((!miss_elem_fifo_empty) & (block_number_4 == block_number_3_read) & (curr_x_4 == curr_x_2d_read) & (curr_y_4 == curr_y_2d_read) & (ref_pix_axi_r_valid & ref_pix_axi_r_ready & ref_pix_axi_r_last ))begin
-         miss_elem_fifo_rd_en = 1;
-      end
-   end
+    if(!output_fifo_program_full ) begin
+        if((!miss_elem_fifo_empty) & (block_number_4 == block_number_3_read) & (curr_x_4 == curr_x_2d_read) & (curr_y_4 == curr_y_2d_read) & 
+         ( (ref_pix_axi_r_valid & ref_pix_axi_r_ready & ref_pix_axi_r_last ) | wb_data_dwnstr_rd_en)
+            )begin
+            miss_elem_fifo_rd_en = 1;
+        end
+    end
 end	
 
+
+assign wb_data_dwnstr_rd_en = ( ( (block_number_3_read == block_number_4) & (curr_x_4 == curr_x_2d_read) & (curr_y_4 == curr_y_2d_read) ) & (~miss_elem_fifo_empty & ~is_req_read_mis_out) );
+
+
 always@(posedge clk) begin
-      if(ref_pix_axi_r_valid & ref_pix_axi_r_ready) begin
-               cache_w_port_old4_reg	<= cache_w_port_old3_reg[(CACHE_LINE_WDTH*BIT_DEPTH + (((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]	    ;
-               cache_w_port_old3_reg	<= cache_w_port_old2_reg[(CACHE_LINE_WDTH*BIT_DEPTH + (((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]	    ;
-               cache_w_port_old2_reg	<= cache_w_port_old1_reg[(CACHE_LINE_WDTH*BIT_DEPTH + (((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]	    ;
-               cache_w_port_old1_reg	<= ref_pix_axi_r_data   [(CACHE_LINE_WDTH*BIT_DEPTH + (((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]	    ;
-      end
+    if(ref_pix_axi_r_valid & ref_pix_axi_r_ready) begin
+        cache_w_port_old4_reg	<= cache_w_port_old3_reg[(CACHE_LINE_WDTH*BIT_DEPTH + (((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]	    ;
+        cache_w_port_old3_reg	<= cache_w_port_old2_reg[(CACHE_LINE_WDTH*BIT_DEPTH + (((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]	    ;
+        cache_w_port_old2_reg	<= cache_w_port_old1_reg[(CACHE_LINE_WDTH*BIT_DEPTH + (((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]	    ;
+        cache_w_port_old1_reg	<= ref_pix_axi_r_data   [(CACHE_LINE_WDTH*BIT_DEPTH + (((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)) ) /(((CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH)+1) -1:0]	    ;
+    end
 end
 
     generate
@@ -1517,18 +1653,18 @@ end
  
 		for(ii=0;ii < ((CACHE_LINE_WDTH)); ii=ii+1) begin
             assign    cache_w_data_arr_luma[ii] = cache_w_port_d[(CACHE_LINE_LUMA_OFFSET)+BIT_DEPTH*(ii+1)-1:(CACHE_LINE_LUMA_OFFSET)+BIT_DEPTH*ii];
-      end
+        end
 		// for(ii=0;ii < ((CACHE_LINE_WDTH/(C_SUB_WIDTH*C_SUB_HEIGHT))); ii=ii+1) begin
             // assign    cache_w_data_arr_cb[ii] = cache_w_port_d[(CACHE_LINE_CB_OFFSET)+BIT_DEPTH*(ii+1)-1:(CACHE_LINE_CB_OFFSET)+BIT_DEPTH*ii];
             // assign    cache_w_data_arr_cr[ii] = cache_w_port_d[(CACHE_LINE_CR_OFFSET)+BIT_DEPTH*(ii+1)-1:(CACHE_LINE_CR_OFFSET)+BIT_DEPTH*ii];
-      // end
+        // end
 		
-      for(ii=0; ii<(BIT_DEPTH*CACHE_LINE_WDTH/BIT_DEPTH) ; ii=ii+1) begin
+        for(ii=0; ii<(BIT_DEPTH*CACHE_LINE_WDTH/BIT_DEPTH) ; ii=ii+1) begin
             assign    cache_rdata_arr[ii] = cache_rdata[BIT_DEPTH*(ii+1)-1:BIT_DEPTH*ii];
-      end
+        end
 		for(ii=0;ii < ((CACHE_LINE_WDTH)); ii=ii+1) begin
             assign    cache_rdata_arr_luma[ii] = cache_rdata[(CACHE_LINE_LUMA_OFFSET)+BIT_DEPTH*(ii+1)-1:(CACHE_LINE_LUMA_OFFSET)+BIT_DEPTH*ii];
-      end
+        end
 		// for(ii=0;ii < ((CACHE_LINE_WDTH/(C_SUB_WIDTH*C_SUB_HEIGHT))); ii=ii+1) begin
             // assign    cache_rdata_arr_cb[ii] = cache_rdata[(CACHE_LINE_CB_OFFSET)+BIT_DEPTH*(ii+1)-1:(CACHE_LINE_CB_OFFSET)+BIT_DEPTH*ii];
             // assign    cache_rdata_arr_cr[ii] = cache_rdata[(CACHE_LINE_CR_OFFSET)+BIT_DEPTH*(ii+1)-1:(CACHE_LINE_CR_OFFSET)+BIT_DEPTH*ii];
@@ -1540,20 +1676,18 @@ end
 
 	generate  
 		if(C_SIZE == 13) begin
-          if(CL_AXI_DIV_FAC==2) begin
-            assign  {yy_pixels_8x8[Y_DIV_WIDTH*1-1:Y_DIV_WIDTH*0]} = cache_w_port_old1_reg;
-            assign  {yy_pixels_8x8[Y_DIV_WIDTH*2-1:Y_DIV_WIDTH*1]} = ref_pix_axi_r_data;  
-         end
-         else begin
-            assign  {yy_pixels_8x8[Y_DIV_WIDTH*1-1:Y_DIV_WIDTH*0]} = ref_pix_axi_r_data;     
-         end
+            if(CL_AXI_DIV_FAC==2) begin
+                assign  {yy_pixels_8x8[Y_DIV_WIDTH*1-1:Y_DIV_WIDTH*0]} = cache_w_port_old1_reg;
+                assign  {yy_pixels_8x8[Y_DIV_WIDTH*2-1:Y_DIV_WIDTH*1]} = ref_pix_axi_r_data;  
+            end
+            else begin
+                assign  {yy_pixels_8x8[Y_DIV_WIDTH*1-1:Y_DIV_WIDTH*0]} = ref_pix_axi_r_data;     
+            end
 			// assign cache_w_port = {ref_pix_axi_r_data[CACHE_LINE_WDTH*BIT_DEPTH -1:AXI_CACHE_DATA_WDTH/2],ref_pix_axi_r_data[CACHE_LINE_WDTH*BIT_DEPTH/2 -1:0]};
-			
-
-		end
+        end
 		else begin
 			// assign cache_w_port = ref_pix_axi_r_data[CACHE_LINE_WDTH*BIT_DEPTH -1:0];
-         assign {yy_pixels_8x8[Y_DIV_WIDTH*1-1:Y_DIV_WIDTH*0]} = ref_pix_axi_r_data;	
+            assign {yy_pixels_8x8[Y_DIV_WIDTH*1-1:Y_DIV_WIDTH*0]} = ref_pix_axi_r_data;	
 		end
 	endgenerate
 

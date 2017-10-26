@@ -95,6 +95,29 @@ module cache_tb();
     logic 							                           ref_pix_axi_r_ready;
     
     
+    logic                                                       ref_pix_axi_awid    ;
+    logic  [7:0]                                                ref_pix_axi_awlen   ;
+    logic  [2:0]                                                ref_pix_axi_awsize  ;
+    logic  [1:0]                                                ref_pix_axi_awburst ;
+    logic                    	                                ref_pix_axi_awlock  ;
+    logic  [3:0]                                                ref_pix_axi_awcache ;
+    logic  [2:0]                                                ref_pix_axi_awprot  ;
+    logic                                                       ref_pix_axi_awvalid	;
+    logic  [AXI_ADDR_WDTH-1:0]                                  ref_pix_axi_awaddr	;
+    logic                    	                                ref_pix_axi_awready	;
+    // write data channel
+    logic      [AXI_CACHE_DATA_WDTH/8-1:0]	                    ref_pix_axi_wstrb	;
+    logic                                 	                    ref_pix_axi_wlast	;
+    logic                                 	                    ref_pix_axi_wvalid	;
+    logic     [AXI_CACHE_DATA_WDTH -1:0]	                    ref_pix_axi_wdata	;
+    logic                                                       ref_pix_axi_wready	;
+    //write response channel
+    logic                      	                                ref_pix_axi_bid		;
+    logic      [1:0]                                            ref_pix_axi_bresp	;
+    logic                      	                                ref_pix_axi_bvalid	;
+    logic                                                       ref_pix_axi_bready	;      
+    
+    
 // axi master write interface  ------------------------------------------  
     wire                                                        axi_awid    ;
     wire  [7:0]                                                 axi_awlen   ;
@@ -164,6 +187,7 @@ inter_cache_pipe_hit_pipe cache_top
 	.ref_idx_in_in                     (0)  ,      // default to zero (for current frame)
     .valid_in                          (valid_in)  ,           // upstream input valid
     .is_req_read                       (1'b1)  ,           // read requests
+    .wb_data_in                        (write_back_data )  ,         
     .cache_idle_out                    (cache_idle_out)  ,         // 1 - cache is ready to accept new input
 
     .pic_width                         (1920)  ,
@@ -226,6 +250,26 @@ inter_cache_pipe_hit_pipe cache_top
     .ref_pix_axi_r_last                (ref_pix_axi_r_last  )  ,
     .ref_pix_axi_r_valid               (ref_pix_axi_r_valid )  ,
     .ref_pix_axi_r_ready               (ref_pix_axi_r_ready )  
+
+    ,.ref_pix_axi_awid                  (ref_pix_axi_awid     )      //TODO
+    ,.ref_pix_axi_awlen                 (ref_pix_axi_awlen    )
+    ,.ref_pix_axi_awsize                (ref_pix_axi_awsize   )
+    ,.ref_pix_axi_awburst               (ref_pix_axi_awburst  )
+    ,.ref_pix_axi_awlock                (ref_pix_axi_awlock   )
+    ,.ref_pix_axi_awcache               (ref_pix_axi_awcache  )
+    ,.ref_pix_axi_awprot                (ref_pix_axi_awprot   )
+    ,.ref_pix_axi_awvalid               (ref_pix_axi_awvalid  )
+    ,.ref_pix_axi_awaddr                (ref_pix_axi_awaddr   )
+    ,.ref_pix_axi_awready               (ref_pix_axi_awready  )
+    ,.ref_pix_axi_wstrb	                (ref_pix_axi_wstrb    )
+    ,.ref_pix_axi_wlast                 (ref_pix_axi_wlast    )
+    ,.ref_pix_axi_wvalid                (ref_pix_axi_wvalid   )
+    ,.ref_pix_axi_wdata                 (ref_pix_axi_wdata    )
+    ,.ref_pix_axi_wready                (ref_pix_axi_wready   )
+    ,.ref_pix_axi_bid                   (ref_pix_axi_bid      )
+    ,.ref_pix_axi_bresp	                (ref_pix_axi_bresp	 )
+    ,.ref_pix_axi_bvalid	            (ref_pix_axi_bvalid	 )
+    ,.ref_pix_axi_bready	            (ref_pix_axi_bready	 )
 
 );
 

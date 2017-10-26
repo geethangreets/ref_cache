@@ -13,7 +13,6 @@ module ref_buf_to_axi_write_master(
 	
     pic_width_in,
     pic_height_in,
-
 	
     axi_awid        ,     
     axi_awlen       ,    
@@ -34,8 +33,6 @@ module ref_buf_to_axi_write_master(
     axi_bresp       ,
     axi_bvalid      ,
     axi_bready       
-    
-    
 );
 //---------------------------------------------------------------------------------------------------------------------
 // Global constant headers
@@ -46,11 +43,12 @@ module ref_buf_to_axi_write_master(
 //---------------------------------------------------------------------------------------------------------------------
 // parameter definitions
 //---------------------------------------------------------------------------------------------------------------------
+    parameter                   SKIP_ADDR_PHASE      = 0;
     parameter                   PIX_REF_AXI_AX_SIZE  = `AX_SIZE_64;
     parameter                   PIX_REF_AXI_AX_LEN   = (CACHE_LINE_WDTH*BIT_DEPTH-1)/AXI_CACHE_DATA_WDTH;
 	
-	parameter YY_WIDTH = PIXEL_WIDTH*DBF_OUT_Y_BLOCK_SIZE*DBF_OUT_Y_BLOCK_SIZE;
-	parameter CH_WIDTH = PIXEL_WIDTH*DBF_OUT_CH_BLOCK_HIGHT*DBF_OUT_CH_BLOCK_WIDTH;
+	parameter                   YY_WIDTH = PIXEL_WIDTH*DBF_OUT_Y_BLOCK_SIZE*DBF_OUT_Y_BLOCK_SIZE;
+	parameter                   CH_WIDTH = PIXEL_WIDTH*DBF_OUT_CH_BLOCK_HIGHT*DBF_OUT_CH_BLOCK_WIDTH;
 //---------------------------------------------------------------------------------------------------------------------
 // localparam definitions
 //---------------------------------------------------------------------------------------------------------------------
@@ -65,8 +63,8 @@ module ref_buf_to_axi_write_master(
     input clk;
     input reset;
     //luma sao fifo interface
-	input 							fifo_is_empty_in	;
-	output reg 						fifo_rd_en_out		;
+	input 							                                        fifo_is_empty_in	;
+	output reg 						                                        fifo_rd_en_out		;
 	input [BIT_DEPTH * 16 * 4 + (X_ADDR_WDTH - LOG2_MIN_DU_SIZE) * 2-1:0]	fifo_data_in		;
 	
 	input [AXI_ADDR_WDTH -1:0]			dpb_axi_addr_in;
@@ -75,58 +73,55 @@ module ref_buf_to_axi_write_master(
     input     [PIC_WIDTH_WIDTH-1:0]    pic_height_in;
 
 	
-    output                                      axi_awid    ;
-    output      [7:0]                           axi_awlen   ;
-    output      [2:0]                           axi_awsize  ;
-    output      [1:0]                           axi_awburst ;
-    output                        	            axi_awlock  ;
-    output      [3:0]                           axi_awcache ;
-    output      [2:0]                           axi_awprot  ;
-(* MARK_DEBUG *)    output reg                                  axi_awvalid	;
-    (* dont_touch = "true" *) output reg  [AXI_ADDR_WDTH-1:0]             axi_awaddr	;
-(* MARK_DEBUG *)    input                       	            axi_awready	;
-
+    output                                                              axi_awid    ;
+    output      [7:0]                                                   axi_awlen   ;
+    output      [2:0]                                                   axi_awsize  ;
+    output      [1:0]                                                   axi_awburst ;
+    output                        	                                    axi_awlock  ;
+    output      [3:0]                                                   axi_awcache ;
+    output      [2:0]                                                   axi_awprot  ;
+(* MARK_DEBUG *)    output reg                                          axi_awvalid	;
+    (* dont_touch = "true" *) output reg  [AXI_ADDR_WDTH-1:0]           axi_awaddr	;
+(* MARK_DEBUG *)    input                       	                    axi_awready	;
     // write data channel
-(* MARK_DEBUG *)    output reg      [AXI_CACHE_DATA_WDTH/8-1:0]	axi_wstrb	;
-                    wire            [AXI_CACHE_DATA_WDTH/8-1:0]	axi_wstrb_nxt	;
-(* MARK_DEBUG *)    output reg                                 	axi_wlast	;
-(* MARK_DEBUG *)    output reg                                 	axi_wvalid	;
-    output reg     [AXI_CACHE_DATA_WDTH -1:0]	axi_wdata	;
-
-(* MARK_DEBUG *)    input	                                    axi_wready	;
-
+    output reg      [AXI_CACHE_DATA_WDTH/8-1:0]	                        axi_wstrb	;
+    wire            [AXI_CACHE_DATA_WDTH/8-1:0]	                        axi_wstrb_nxt	;
+    output reg                                 	                        axi_wlast	;
+    output reg                                 	                        axi_wvalid	;
+    output reg     [AXI_CACHE_DATA_WDTH -1:0]	                        axi_wdata	;
+    input	                                                            axi_wready	;
     //write response channel
-    input                       	            axi_bid		;
-(* MARK_DEBUG *)    input       [1:0]                           axi_bresp	;
-(* MARK_DEBUG *)    input                       	            axi_bvalid	;
-(* MARK_DEBUG *)    output                                   axi_bready	;  
+    input                       	                                    axi_bid		;
+(* MARK_DEBUG *)    input       [1:0]                                   axi_bresp	;
+(* MARK_DEBUG *)    input                       	                    axi_bvalid	;
+(* MARK_DEBUG *)    output                                              axi_bready	;  
 //---------------------------------------------------------------------------------------------------------------------
 // Internal wires and registers
 //---------------------------------------------------------------------------------------------------------------------
 
     
-(* MARK_DEBUG *)    reg [31:0]                         state_axi_write;
+(* MARK_DEBUG *)    reg [31:0]                                              state_axi_write;
     reg [7:0] burst_counter;
     
-	wire [X_ADDR_WDTH -LOG2_MIN_DU_SIZE -1: 0]				Xc_out_8x8;
-	wire [X_ADDR_WDTH -LOG2_MIN_DU_SIZE -1: 0]				Yc_out_8x8;	
+	wire [X_ADDR_WDTH -LOG2_MIN_DU_SIZE -1: 0]				                Xc_out_8x8;
+	wire [X_ADDR_WDTH -LOG2_MIN_DU_SIZE -1: 0]				                Yc_out_8x8;	
 	
-	wire [PIXEL_WIDTH*DBF_OUT_Y_BLOCK_SIZE*DBF_OUT_Y_BLOCK_SIZE -1:0] 	yy_pixels_8x8;
-	wire [PIXEL_WIDTH*DBF_OUT_CH_BLOCK_HIGHT*DBF_OUT_CH_BLOCK_WIDTH -1:0] cb_pixels_8x8;
-	wire [PIXEL_WIDTH*DBF_OUT_CH_BLOCK_HIGHT*DBF_OUT_CH_BLOCK_WIDTH -1:0] cr_pixels_8x8;
+	wire [PIXEL_WIDTH*DBF_OUT_Y_BLOCK_SIZE*DBF_OUT_Y_BLOCK_SIZE -1:0] 	    yy_pixels_8x8;
+	wire [PIXEL_WIDTH*DBF_OUT_CH_BLOCK_HIGHT*DBF_OUT_CH_BLOCK_WIDTH -1:0]   cb_pixels_8x8;
+	wire [PIXEL_WIDTH*DBF_OUT_CH_BLOCK_HIGHT*DBF_OUT_CH_BLOCK_WIDTH -1:0]   cr_pixels_8x8;
 	
-	reg [AXI_ADDR_WDTH -1:0]			current_pic_dpb_base_addr_d;
-	reg [AXI_ADDR_WDTH -1:0]			current_pic_dpb_base_addr_use;
+	reg [AXI_ADDR_WDTH -1:0]			                                    current_pic_dpb_base_addr_d;
+	reg [AXI_ADDR_WDTH -1:0]			                                    current_pic_dpb_base_addr_use;
   
-    wire        [CTB_SIZE_WIDTH - LOG2_MIN_DU_SIZE - 1:0]      		y_8x8_in_ctu;
-    wire        [CTB_SIZE_WIDTH - LOG2_MIN_DU_SIZE - 1:0]         	x_8x8_in_ctu;
-    wire        [X11_ADDR_WDTH - CTB_SIZE_WIDTH - 1:0]          	   x_ctu;
-    wire        [X11_ADDR_WDTH - CTB_SIZE_WIDTH - 1:0]         		y_ctu;
+    wire        [CTB_SIZE_WIDTH - LOG2_MIN_DU_SIZE - 1:0]      		        y_8x8_in_ctu;
+    wire        [CTB_SIZE_WIDTH - LOG2_MIN_DU_SIZE - 1:0]         	        x_8x8_in_ctu;
+    wire        [X11_ADDR_WDTH - CTB_SIZE_WIDTH - 1:0]          	        x_ctu;
+    wire        [X11_ADDR_WDTH - CTB_SIZE_WIDTH - 1:0]         		        y_ctu;
     
     
-    wire [AXI_CACHE_DATA_WDTH -1:0] axi_wdata_b[4:0];
-    parameter Y_DIV_WIDTH = YY_WIDTH/CL_AXI_DIV_FAC;
-    parameter CB_DIV_WIDTH = CH_WIDTH/CL_AXI_DIV_FAC;
+    wire [AXI_CACHE_DATA_WDTH -1:0]                                         axi_wdata_b[4:0];
+    parameter Y_DIV_WIDTH =     YY_WIDTH/CL_AXI_DIV_FAC;
+    parameter CB_DIV_WIDTH =    CH_WIDTH/CL_AXI_DIV_FAC;
    generate  
 
         if(CL_AXI_DIV_FAC==2) begin
@@ -230,31 +225,53 @@ module ref_buf_to_axi_write_master(
     always@(posedge clk) begin
         if (reset) begin
             state_axi_write <= STATE_AXI_WRITE_ADDRESS_SEND;
-            axi_awvalid <= 0;
-            axi_wvalid <= 0;
-            // axi_bready <= 0;
-            burst_counter <= 0;
-            axi_wstrb <= 64'h0000_0000_0000_0000;
+            axi_awvalid     <= 0;
+            axi_wvalid      <= 0;
+            // axi_bready   <= 0;
+            burst_counter   <= 0;
+            axi_wstrb       <= 64'h0000_0000_0000_0000;
         end
         else begin
             case(state_axi_write)
                 STATE_AXI_WRITE_ADDRESS_SEND: begin
-                    if(!fifo_is_empty_in) begin
-                        axi_awaddr <= current_pic_dpb_base_addr_use + (y_ctu * `REF_PIX_IU_ROW_OFFSET)+ (x_ctu*`REF_PIX_IU_OFFSET) +  (y_8x8_in_ctu* `REF_PIX_BU_ROW_OFFSET) + (x_8x8_in_ctu* `REF_PIX_BU_OFFSET);
-                        axi_awvalid <= 1;
-                        state_axi_write <= STATE_AXI_WRITE_ADDRESS_SEND_WAIT;
-                    end  
+                    if(SKIP_ADDR_PHASE ==0 )begin
+                        if(!fifo_is_empty_in) begin
+                            axi_awaddr <= current_pic_dpb_base_addr_use + (y_ctu * `REF_PIX_IU_ROW_OFFSET)+ (x_ctu*`REF_PIX_IU_OFFSET) +  (y_8x8_in_ctu* `REF_PIX_BU_ROW_OFFSET) + (x_8x8_in_ctu* `REF_PIX_BU_OFFSET);
+                            axi_awvalid <= 1;
+                            state_axi_write <= STATE_AXI_WRITE_ADDRESS_SEND_WAIT;
+                        end  
+                        else begin
+                            axi_awvalid <= 0;
+                        end
+                        // axi_bready <= 0;
+                        axi_wvalid <= 0;
+                        burst_counter <= 0;
+                        axi_wlast <= 0;
+                    end 
                     else begin
-                        axi_awvalid <= 0;
+                        if(!fifo_is_empty_in) begin
+                            state_axi_write <= STATE_AXI_WRITE_ADDRESS_SEND_WAIT;
+                            axi_wvalid <= 0;
+                            burst_counter <= 0;
+                            axi_wlast <= 0;                        
+                        end
                     end
-                    // axi_bready <= 0;
-                    axi_wvalid <= 0;
-                    burst_counter <= 0;
-                    axi_wlast <= 0;
                 end
                 STATE_AXI_WRITE_ADDRESS_SEND_WAIT: begin
-                    if(axi_awready) begin
-                        axi_awvalid <= 0;
+                    if(SKIP_ADDR_PHASE ==0 )begin
+                        if(axi_awready) begin
+                            axi_awvalid <= 0;
+                            burst_counter <= burst_counter + 1;
+                            if(burst_counter == axi_awlen) begin
+                               axi_wlast <= 1;
+                            end
+                            axi_wstrb <= axi_wstrb_nxt;
+                            axi_wdata <= axi_wdata_b[burst_counter];
+                            axi_wvalid <= 1;
+                            state_axi_write <= STATE_AXI_WRITE_WAIT;
+                        end
+                    end
+                    else begin
                         burst_counter <= burst_counter + 1;
                         if(burst_counter == axi_awlen) begin
                            axi_wlast <= 1;
