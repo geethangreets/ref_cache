@@ -207,80 +207,75 @@ end
   end
 
 
-  always @(*) begin :read_next_state_logic
-      case (read_state)
-        STATE_IDLE :begin
-          rvalid =0;
-          read_mod1_ready_out = 1;
-          rlast=0;
-          if (read_mod1_valid_in==1) begin
-            read_next_state=STATE_TASK;
-          end
-          else begin
-            read_next_state=STATE_IDLE;
-          end
-        end
-
-        STATE_TASK :begin
-          //top_test.uut.memory.data_read(read_address,rdata);
-          rvalid =1;
-          if (rready==1) begin
-
-
-            if(read_mod1_valid_in==0 && read_burst_length == 4'b0000) begin
-              read_next_state=STATE_IDLE;
-            end
-            else begin
-              read_next_state=STATE_TASK;
-            end
-
-            if(read_burst_length==4'b0000) begin
-                read_mod1_ready_out=1;
-                rlast=1;
-            end
-            else begin
-                read_mod1_ready_out=0;
-                rlast = 0;
-            end
-
-          end
-          else begin
-            //rvalid=0;
-            rlast=0;
-            read_mod1_ready_out=0;
-            read_next_state=STATE_WAIT;
-          end
-        end
-
-        STATE_WAIT :begin
-          rvalid=1;
-          if (rready==1) begin
-            if(read_mod1_valid_in==0 && read_burst_length==4'b0000) begin
-              read_next_state=STATE_IDLE;
-            end
-            else begin
-              read_next_state=STATE_TASK;
-            end
-
-            if(read_burst_length==4'b0000) begin
-                read_mod1_ready_out=1;
-                rlast=1;
-            end
-            else begin
-                read_mod1_ready_out=0;
+    always @(*) begin :read_next_state_logic
+        case (read_state)
+            STATE_IDLE :begin
+                rvalid =0;
+                read_mod1_ready_out = 1;
                 rlast=0;
+                if (read_mod1_valid_in==1) begin
+                    read_next_state=STATE_TASK;
+                end
+                else begin
+                    read_next_state=STATE_IDLE;
+                end
             end
-          end
-          else begin
-            //rvalid=0;
-            rlast=0;
-            read_mod1_ready_out=0;
-            read_next_state=STATE_WAIT;
-          end
-        end
-
+            STATE_TASK :begin
+                //top_test.uut.memory.data_read(read_address,rdata);
+                rvalid =1;
+                if(read_burst_length==4'b0000) begin
+                    rlast=1;
+                end
+                else begin
+                    rlast = 0;
+                end
+                if (rready==1) begin
+                    if(read_mod1_valid_in==0 && read_burst_length == 4'b0000) begin
+                        read_next_state=STATE_IDLE;
+                    end
+                    else begin
+                        read_next_state=STATE_TASK;
+                    end
+                    if(read_burst_length==4'b0000) begin
+                        read_mod1_ready_out=1;
+                    end
+                    else begin
+                        read_mod1_ready_out=0;
+                    end
+                end
+                else begin
+                    read_mod1_ready_out=0;
+                    read_next_state=STATE_WAIT;
+                end
+            end
+            STATE_WAIT :begin
+                rvalid=1;
+                if(read_burst_length==4'b0000) begin
+                    rlast=1;
+                end
+                else begin
+                    rlast=0;
+                end
+                if (rready==1) begin
+                    if(read_mod1_valid_in==0 && read_burst_length==4'b0000) begin
+                        read_next_state=STATE_IDLE;
+                    end
+                    else begin
+                        read_next_state=STATE_TASK;
+                    end
+                    if(read_burst_length==4'b0000) begin
+                        read_mod1_ready_out=1;
+                    end
+                    else begin
+                        read_mod1_ready_out=0;
+                    end
+                end
+                else begin
+                    read_mod1_ready_out=0;
+                    read_next_state=STATE_WAIT;
+                end
+            end
         endcase
-
     end
 
 integer i;

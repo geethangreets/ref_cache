@@ -145,8 +145,8 @@ assign cache_req_data_out = {file_rdata};
 assign inner_next_x_idx = (inner_cur_x_idx < (CTU_SIZE/BLOCK_SIZE)-1) ? inner_cur_x_idx + 1 : 0;
 assign inner_next_y_idx = (inner_cur_x_idx < (CTU_SIZE/BLOCK_SIZE)-1) ? inner_cur_y_idx : ((inner_cur_y_idx < (CTU_SIZE/BLOCK_SIZE)-1) ?inner_cur_y_idx + 1: 0);
 
-assign outer_next_x_idx = ((inner_cur_x_idx < (CTU_SIZE/BLOCK_SIZE)-1) || (inner_cur_y_idx < (CTU_SIZE/BLOCK_SIZE)-1))  ? (outer_cur_x_idx) : ((outer_cur_x_idx < (IMG_WIDTH/BLOCK_SIZE)-1) ? outer_cur_x_idx + (CTU_SIZE/BLOCK_SIZE) : 0);
-assign outer_next_y_idx = ((inner_cur_x_idx < (CTU_SIZE/BLOCK_SIZE)-1) || (inner_cur_y_idx < (CTU_SIZE/BLOCK_SIZE)-1))  ? (outer_cur_y_idx) : ((outer_cur_x_idx < (IMG_WIDTH/BLOCK_SIZE)-1) ? outer_cur_y_idx : outer_cur_y_idx + (CTU_SIZE/BLOCK_SIZE)); 
+assign outer_next_x_idx = ((inner_cur_x_idx < (CTU_SIZE/BLOCK_SIZE)-1) || (inner_cur_y_idx < (CTU_SIZE/BLOCK_SIZE)-1))  ? (outer_cur_x_idx) : ((outer_cur_x_idx < (IMG_WIDTH/BLOCK_SIZE)-BLOCK_SIZE) ? outer_cur_x_idx + (CTU_SIZE/BLOCK_SIZE) : 0);
+assign outer_next_y_idx = ((inner_cur_x_idx < (CTU_SIZE/BLOCK_SIZE)-1) || (inner_cur_y_idx < (CTU_SIZE/BLOCK_SIZE)-1))  ? (outer_cur_y_idx) : ((outer_cur_x_idx < (IMG_WIDTH/BLOCK_SIZE)-BLOCK_SIZE) ? outer_cur_y_idx : outer_cur_y_idx + (CTU_SIZE/BLOCK_SIZE)); 
 
 assign next_x_idx = inner_next_x_idx + outer_next_x_idx;
 assign next_y_idx = inner_next_y_idx + outer_next_y_idx;
@@ -171,7 +171,8 @@ assign next_poc_idx = ((cur_y_idx == (IMG_HEIGHT/BLOCK_SIZE)-1) && (cur_x_idx ==
             case(state)
                 0: begin
                     if(xy_driver_valid) begin
-                        if ( ((cur_x_idx*BLOCK_SIZE) > (luma_ref_start_x_in+BLOCK_SIZE) ) && ((cur_y_idx*BLOCK_SIZE) > (luma_ref_start_y_in+BLOCK_SIZE)) ) begin
+                        if (( ((cur_x_idx*BLOCK_SIZE) > (luma_ref_start_x_in) ) && ((cur_y_idx*BLOCK_SIZE) > (luma_ref_start_y_in)) ) ||
+                        (((cur_y_idx*BLOCK_SIZE) > (luma_ref_start_y_in+CTU_SIZE))) )begin
                             state <= 1;
                         end
                         else begin
@@ -205,7 +206,8 @@ assign next_poc_idx = ((cur_y_idx == (IMG_HEIGHT/BLOCK_SIZE)-1) && (cur_x_idx ==
         case(state)
             0: begin
                 if(xy_driver_valid) begin
-                    if ( ((cur_x_idx*BLOCK_SIZE) > (luma_ref_start_x_in+BLOCK_SIZE) ) && ((cur_y_idx*BLOCK_SIZE)> (luma_ref_start_y_in+BLOCK_SIZE)) ) begin
+                    if (( ((cur_x_idx*BLOCK_SIZE) > (luma_ref_start_x_in) ) && ((cur_y_idx*BLOCK_SIZE)> (luma_ref_start_y_in)) ) || 
+                    (((cur_y_idx*BLOCK_SIZE) > (luma_ref_start_y_in+CTU_SIZE))))begin
 
                     end
                     else begin
