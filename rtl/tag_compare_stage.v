@@ -42,6 +42,7 @@ module tag_compare_stage
    
    miss_elem_fifo_full           ,
    ref_pix_axi_ar_fifo_full      ,  
+   ref_pix_axi_aw_fifo_full      ,  
    hit_elem_fifo_full            ,
    op_conf_fifo_program_full     ,  
    
@@ -129,6 +130,7 @@ module tag_compare_stage
    
    input                                                                miss_elem_fifo_full        ;
    input                                                                ref_pix_axi_ar_fifo_full   ;
+   input                                                                ref_pix_axi_aw_fifo_full   ;
    input                                                                hit_elem_fifo_full         ;
    input                                                                op_conf_fifo_program_full  ; 
 
@@ -310,7 +312,7 @@ end
 always@(*) begin
 			tag_compare_stage_ready = 1;
          // if(!is_hit) begin
-            if(miss_elem_fifo_full || ref_pix_axi_ar_fifo_full || hit_elem_fifo_full || op_conf_fifo_program_full) begin
+            if(miss_elem_fifo_full || ref_pix_axi_ar_fifo_full || ref_pix_axi_aw_fifo_full || hit_elem_fifo_full || op_conf_fifo_program_full) begin
                tag_compare_stage_ready = 0;
             end
          // end

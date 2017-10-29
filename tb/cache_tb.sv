@@ -8,6 +8,7 @@ module cache_tb();
     
     parameter IBC_REF_BLK_WIDTH = 8;
     parameter X_FILE_WIDTH = 32;
+	parameter YY_WIDTH = PIXEL_WIDTH*DBF_OUT_Y_BLOCK_SIZE*DBF_OUT_Y_BLOCK_SIZE;
     
     const realtime CLOCK_PERIOD = 10;
     const realtime HALF_CLOCK_PERIOD = CLOCK_PERIOD / 2;
@@ -21,36 +22,39 @@ module cache_tb();
     
 //////////////////WIRE declaration ////////////////////////
     logic                                         valid_in; 
-    logic								         cache_valid_out;   // assuming cache_block_ready is single cylce 
-    logic										 cache_idle_out;
+    logic								          cache_valid_out;   // assuming cache_block_ready is single cylce 
+    logic										  cache_idle_out;
     logic                                         filer_idle_in;
     logic                                         cache_full_idle;
 
+	logic signed [32 -1:0] 	cur_x_idx;	
+	logic signed [32 -1:0] 	cur_y_idx;
+    wire [YY_WIDTH-1:0] yy_pixels_8x8;
 	logic signed [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0] 	luma_ref_start_x_in;	
 	logic signed [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0] 	luma_ref_start_y_in;
 	logic signed [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0] 	chma_ref_start_x_in;	
 	logic signed [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0] 	chma_ref_start_y_in;	
 	
-	logic  [LUMA_DIM_WDTH - 1:0]   			               chma_ref_width_x_in            ;	
-    logic  [LUMA_DIM_WDTH - 1:0]                           chma_ref_height_y_in           ;   
-	logic  [LUMA_DIM_WDTH - 1:0]   			               luma_ref_width_x_in            ;	
-    logic  [LUMA_DIM_WDTH - 1:0]                           luma_ref_height_y_in           ;  
+	logic  [LUMA_DIM_WDTH - 1:0]   			                chma_ref_width_x_in            ;	
+    logic  [LUMA_DIM_WDTH - 1:0]                            chma_ref_height_y_in           ;   
+	logic  [LUMA_DIM_WDTH - 1:0]   			                luma_ref_width_x_in            ;	
+    logic  [LUMA_DIM_WDTH - 1:0]                            luma_ref_height_y_in           ;  
 
-    logic  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]       luma_ref_start_x_out   ;
-    logic  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]       luma_ref_start_y_out   ;
-    logic  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]       chma_ref_start_x_out   ;
-    logic  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]       chma_ref_start_y_out   ;
+    logic  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]          luma_ref_start_x_out   ;
+    logic  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]          luma_ref_start_y_out   ;
+    logic  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]          chma_ref_start_x_out   ;
+    logic  [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]          chma_ref_start_y_out   ;
    
-    logic   [LUMA_DIM_WDTH - 1:0]                        chma_ref_width_x_out   ;
-    logic   [LUMA_DIM_WDTH - 1:0]                        chma_ref_height_y_out  ;
-    logic   [LUMA_DIM_WDTH - 1:0]                        luma_ref_width_x_out   ;
-    logic   [LUMA_DIM_WDTH - 1:0]                        luma_ref_height_y_out  ;
+    logic   [LUMA_DIM_WDTH - 1:0]                           chma_ref_width_x_out   ;
+    logic   [LUMA_DIM_WDTH - 1:0]                           chma_ref_height_y_out  ;
+    logic   [LUMA_DIM_WDTH - 1:0]                           luma_ref_width_x_out   ;
+    logic   [LUMA_DIM_WDTH - 1:0]                           luma_ref_height_y_out  ;
 
 
-    logic   [MV_C_FRAC_WIDTH_HIGH -1:0]                  ch_frac_x;
-    logic   [MV_C_FRAC_WIDTH_HIGH -1:0]                  ch_frac_y;
-    logic   [MV_C_FRAC_WIDTH_HIGH -1:0]                  ch_frac_x_out;
-    logic   [MV_C_FRAC_WIDTH_HIGH -1:0]                  ch_frac_y_out; 
+    logic   [MV_C_FRAC_WIDTH_HIGH -1:0]                     ch_frac_x;
+    logic   [MV_C_FRAC_WIDTH_HIGH -1:0]                     ch_frac_y;
+    logic   [MV_C_FRAC_WIDTH_HIGH -1:0]                     ch_frac_x_out;
+    logic   [MV_C_FRAC_WIDTH_HIGH -1:0]                     ch_frac_y_out; 
    
     logic			[REF_ADDR_WDTH-1:0]		            ref_idx_in_in;
 	
@@ -154,6 +158,7 @@ module cache_tb();
     always
         #HALF_CLOCK_PERIOD clk = ~clk;
 
+wire read_req_bit_n ;
 request_issuer
 #(
     .BLOCK_SIZE     (IBC_REF_BLK_WIDTH),
@@ -164,17 +169,22 @@ request_issuer
 (
     .clk                 (clk)                  ,
     .reset               (reset)                ,
-    .cache_idle_in       (cache_idle_out)        ,
-    .cache_valid_out     (valid_in)      ,
-	.cache_req_data_out  (file_rdata)   ,
-    .write_back_en_out   (write_back_nempty)    ,
-	.write_back_ack_in   (write_back_rd_en)    ,
+    .cache_idle_in       (cache_idle_out)       ,
+    .cache_valid_out     (valid_in)             ,
+	.cache_req_data_out  (file_rdata)           ,
+    .write_back_en_out   (read_req_bit_n)         ,
+	.write_back_ack_in   (cache_idle_out)     ,
 	.write_back_data     (write_back_data)
 );
 
-     
-assign {luma_ref_start_x_in} = file_rdata[MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0];
-assign {luma_ref_start_y_in} = file_rdata[MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1+X_FILE_WIDTH:0+X_FILE_WIDTH];
+assign  {cur_x_idx[X_ADDR_WDTH -1: LOG2_MIN_DU_SIZE],cur_y_idx[X_ADDR_WDTH -1: LOG2_MIN_DU_SIZE],yy_pixels_8x8} 
+        = write_back_data;
+assign cur_x_idx[32 -1:(X_ADDR_WDTH)] = 0;
+assign cur_y_idx[32 -1:(X_ADDR_WDTH)] = 0;
+assign cur_x_idx[LOG2_MIN_DU_SIZE-1:0] = 0;
+assign cur_y_idx[LOG2_MIN_DU_SIZE-1:0] = 0;
+assign {luma_ref_start_x_in} = read_req_bit_n ? cur_x_idx[MVD_WIDTH -  MV_L_FRAC_WIDTH_HIGH -1:0] :file_rdata[MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0];
+assign {luma_ref_start_y_in} = read_req_bit_n ? cur_y_idx[MVD_WIDTH -  MV_L_FRAC_WIDTH_HIGH -1:0] :file_rdata[MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1+X_FILE_WIDTH:0+X_FILE_WIDTH];
 
 assign write_back_empty = ~ write_back_nempty;
 
@@ -184,9 +194,9 @@ inter_cache_pipe_hit_pipe cache_top
     .reset                             (reset)  ,
 
 //-------upstream interface------
-	.ref_idx_in_in                     (0)  ,      // default to zero (for current frame)
-    .valid_in                          (valid_in)  ,           // upstream input valid
-    .is_req_read                       (1'b1)  ,           // read requests
+	.ref_idx_in_in                     (0)          ,           // default to zero (for current frame)
+    .valid_in                          ((valid_in|(read_req_bit_n & cache_idle_out) ))   ,           // upstream input valid
+    .is_req_read                       (~read_req_bit_n)       ,           // read requests
     .wb_data_in                        (write_back_data )  ,         
     .cache_idle_out                    (cache_idle_out)  ,         // 1 - cache is ready to accept new input
 
@@ -274,41 +284,40 @@ inter_cache_pipe_hit_pipe cache_top
 );
 
 
-ref_buf_to_axi_write_master
-cache_wb_blk
-(
-    .clk                 (clk  )       ,
-    .reset               (reset)       ,
-	//fifo interface      
-	.fifo_is_empty_in    (write_back_empty  )       ,
-	.fifo_rd_en_out	     (write_back_rd_en	)       ,
-	.fifo_data_in	     (write_back_data   )       ,   
-	.dpb_axi_addr_in     (0   )       ,
-    .pic_width_in        (1920      )       ,
-    .pic_height_in       (1080     )       ,
-    //axi interface
-    .axi_awid            (axi_awid          )       ,     
-    .axi_awlen           (axi_awlen         )       ,    
-    .axi_awsize          (axi_awsize        )       ,   
-    .axi_awburst         (axi_awburst       )       ,  
-    .axi_awlock          (axi_awlock        )       ,   
-    .axi_awcache         (axi_awcache       )       ,  
-    .axi_awprot          (axi_awprot        )       ,   
-    .axi_awvalid         (axi_awvalid       )       ,
-    .axi_awaddr          (axi_awaddr        )       ,
-    .axi_awready         (axi_awready       )       ,
-    .axi_wstrb           (axi_wstrb         )       ,
-    .axi_wlast           (axi_wlast         )       ,
-    .axi_wvalid          (axi_wvalid        )       ,
-    .axi_wdata           (axi_wdata         )       ,
-    .axi_wready          (axi_wready        )       ,
-    .axi_bid             (axi_bid           )       ,
-    .axi_bresp           (axi_bresp         )       ,
-    .axi_bvalid          (axi_bvalid        )       ,
-    .axi_bready          (axi_bready        )
+// ref_buf_to_axi_write_master
+// cache_wb_blk
+// (
+    // .clk                 (clk  )       ,
+    // .reset               (reset)       ,
+	////fifo interface      
+	// .fifo_is_empty_in    (write_back_empty  )       ,
+	// .fifo_rd_en_out	     (write_back_rd_en	)       ,
+	// .fifo_data_in	     (write_back_data   )       ,   
+	// .dpb_axi_addr_in     (0   )       ,
+    // .pic_width_in        (1920      )       ,
+    // .pic_height_in       (1080     )       ,
+    ////axi interface
+    // .axi_awid            (axi_awid          )       ,     
+    // .axi_awlen           (axi_awlen         )       ,    
+    // .axi_awsize          (axi_awsize        )       ,   
+    // .axi_awburst         (axi_awburst       )       ,  
+    // .axi_awlock          (axi_awlock        )       ,   
+    // .axi_awcache         (axi_awcache       )       ,  
+    // .axi_awprot          (axi_awprot        )       ,   
+    // .axi_awvalid         (axi_awvalid       )       ,
+    // .axi_awaddr          (axi_awaddr        )       ,
+    // .axi_awready         (axi_awready       )       ,
+    // .axi_wstrb           (axi_wstrb         )       ,
+    // .axi_wlast           (axi_wlast         )       ,
+    // .axi_wvalid          (axi_wvalid        )       ,
+    // .axi_wdata           (axi_wdata         )       ,
+    // .axi_wready          (axi_wready        )       ,
+    // .axi_bid             (axi_bid           )       ,
+    // .axi_bresp           (axi_bresp         )       ,
+    // .axi_bvalid          (axi_bvalid        )       ,
+    // .axi_bready          (axi_bready        )
     
-    
-);
+// );
 
 // synthesis translate_off
     mem_slave_top_module
@@ -322,7 +331,7 @@ cache_wb_blk
         .reset  (reset),
 
         .arid   (4'd0),
-        .araddr (ref_pix_axi_ar_addr),
+        .araddr (ref_pix_axi_ar_addr        ),
         .arlen  (ref_pix_axi_ar_len),
         .arsize  (ref_pix_axi_ar_size),
         .arburst(ref_pix_axi_ar_burst),
@@ -339,35 +348,31 @@ cache_wb_blk
         .rvalid (ref_pix_axi_r_valid),
         .rready (ref_pix_axi_r_ready),
 
-        .awid       (axi_awid       ),
-        .awaddr     (axi_awaddr     ),
-        .awlen      (axi_awlen      ),
-        .awsize     (axi_awsize     ),
-        .awburst    (axi_awburst    ),
-        .awlock     (axi_awlock     ),
-        .awcache    (axi_awcache    ),
-        .awprot     (axi_awprot     ),
-        .awvalid    (axi_awvalid    ),
-        .awready    (axi_awready    ),
+        .awid       (ref_pix_axi_awid       ),
+        .awaddr     (ref_pix_axi_awaddr     ),
+        .awlen      (ref_pix_axi_awlen      ),
+        .awsize     (ref_pix_axi_awsize     ),
+        .awburst    (ref_pix_axi_awburst    ),
+        .awlock     (ref_pix_axi_awlock     ),
+        .awcache    (ref_pix_axi_awcache    ),
+        .awprot     (ref_pix_axi_awprot     ),
+        .awvalid    (ref_pix_axi_awvalid    ),
+        .awready    (ref_pix_axi_awready    ),
 
         .wid        (   ),
-        .wdata      (axi_wdata      ),
-        .wstrb      (axi_wstrb      ),
-        .wvalid     (axi_wvalid     ),
-        .wlast      (axi_wlast      ),
-        .wready     (axi_wready     ),
+        .wdata      (ref_pix_axi_wdata      ),
+        .wstrb      (ref_pix_axi_wstrb      ),
+        .wvalid     (ref_pix_axi_wvalid     ),
+        .wlast      (ref_pix_axi_wlast      ),
+        .wready     (ref_pix_axi_wready     ),
     
-        .bid        (axi_bid        ),
-        .bresp      (axi_bresp      ),
-        .bvalid     (axi_bvalid     ),
-        .bready     (axi_bready     )
+        .bid        (ref_pix_axi_bid        ),
+        .bresp      (ref_pix_axi_bresp      ),
+        .bvalid     (ref_pix_axi_bvalid     ),
+        .bready     (ref_pix_axi_bready     )
      );
 
-
-
-     
-
-
+   
 
     generate
         genvar ii;

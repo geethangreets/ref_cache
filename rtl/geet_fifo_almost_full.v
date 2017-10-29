@@ -49,9 +49,13 @@ module geet_fifo_almost_full(
     reg [LOG2_FIFO_DEPTH-1:0] rd_pointer;
     reg [LOG2_FIFO_DEPTH-1:0] rd_pointer2;
     reg [FIFO_DATA_WIDTH-1:0] internal [(1<<LOG2_FIFO_DEPTH)-1:0];
+    wire [LOG2_FIFO_DEPTH-1:0] occupancy;
     
     wire [LOG2_FIFO_DEPTH-1:0] next_rd_pointer = rd_pointer + 1'b1;
     wire [LOG2_FIFO_DEPTH-1:0] next_wr_pointer = wr_pointer + 1'b1;
+    
+    
+    assign occupancy = (wr_pointer>rd_pointer ) ? (wr_pointer-rd_pointer) : ((1<<LOG2_FIFO_DEPTH) - (wr_pointer-rd_pointer));
 //---------------------------------------------------------------------------------------------------------------------
 // Implmentation
 //---------------------------------------------------------------------------------------------------------------------

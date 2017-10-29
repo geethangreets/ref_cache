@@ -5,6 +5,7 @@ module cache_conf_stage
    reset,
    
    valid_in,
+   is_req_read,
    tag_compare_stage_ready,
    op_conf_fifo_wr_en,
    
@@ -77,6 +78,7 @@ module cache_conf_stage
    input clk;
    input reset;
    input valid_in;
+   input is_req_read;
    input tag_compare_stage_ready;
    
    input  signed [MVD_WIDTH - MV_L_FRAC_WIDTH_HIGH -1:0]   pic_width;   
@@ -185,13 +187,15 @@ module cache_conf_stage
 always@(posedge clk) begin : SET_CONFIG
 	if(reset) begin
 		ref_idx_in <= 0;
-      op_conf_fifo_wr_en <= 1'b0;
+        op_conf_fifo_wr_en <= 1'b0;
 	end
 	else begin
-      op_conf_fifo_wr_en <= 0;
-      if(~( ~tag_compare_stage_ready)) begin
-         if(valid_in) begin
-            op_conf_fifo_wr_en <= 1;
+        op_conf_fifo_wr_en <= 0;
+        if(~( ~tag_compare_stage_ready)) begin
+            if(valid_in) begin
+                if(is_req_read) begin
+                    op_conf_fifo_wr_en <= 1;
+                end
  
             luma_ref_start_x    <=  luma_ref_start_x_in  ;
             luma_ref_start_y    <=  luma_ref_start_y_in  ;   

@@ -24,10 +24,10 @@ module request_issuer(
     reset,
     cache_idle_in,
     cache_valid_out,
-	cache_req_data_out,
+    cache_req_data_out,
     write_back_en_out,
-	write_back_ack_in,
-	write_back_data
+    write_back_ack_in,
+    write_back_data
 );
 //---------------------------------------------------------------------------------------------------------------------
 // Global constant headers
@@ -54,9 +54,9 @@ module request_issuer(
     input clk;
     input reset;
     
-    input  cache_idle_in;
-    output reg cache_valid_out;
-    output [X_FILE_WIDTH*2-1:0]   cache_req_data_out;
+    input                           cache_idle_in;
+    output reg                      cache_valid_out;
+    output [X_FILE_WIDTH*2-1:0]     cache_req_data_out;
     
     input                                               write_back_ack_in;
     output  reg                                         write_back_en_out;

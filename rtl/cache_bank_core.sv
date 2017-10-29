@@ -34,6 +34,7 @@ module cache_bank_core
    
    miss_elem_fifo_full      ,
    ref_pix_axi_ar_fifo_full ,   
+   ref_pix_axi_aw_fifo_full ,   
    hit_elem_fifo_full       ,   
    op_conf_fifo_program_full,   
    
@@ -157,6 +158,7 @@ module cache_bank_core
    
    input                                            miss_elem_fifo_full       ;
    input                                            ref_pix_axi_ar_fifo_full  ;
+   input                                            ref_pix_axi_aw_fifo_full  ;
    input                                            hit_elem_fifo_full        ;
    input                                            op_conf_fifo_program_full ;
    
@@ -507,6 +509,7 @@ tag_compare_pipe_stage
    
    .miss_elem_fifo_full          (miss_elem_fifo_full          ) ,
    .ref_pix_axi_ar_fifo_full     (ref_pix_axi_ar_fifo_full     ) ,  
+   .ref_pix_axi_aw_fifo_full     (ref_pix_axi_aw_fifo_full     ) ,  
    .hit_elem_fifo_full           (hit_elem_fifo_full           ) ,
    .op_conf_fifo_program_full    (op_conf_fifo_program_full    ) , 
    

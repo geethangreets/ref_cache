@@ -597,15 +597,15 @@ ref_buf_to_axi_write_master
 )
 cache_wb_blk
 (
-    .clk                 (clk                     )       ,
-    .reset               (reset                   )       ,
+    .clk                 (clk                  )       ,
+    .reset               (reset                )       ,
 	//fifo interface      
-	.fifo_is_empty_in    (wb_data_fifo_empty      )       ,
-	.fifo_rd_en_out	     (wb_data_fifo_rd_en      )       ,
-	.fifo_data_in	     (wb_data_read            )       ,   
-	.dpb_axi_addr_in     (0                       )       ,
-    .pic_width_in        (pic_width               )       ,
-    .pic_height_in       (pic_height              )       ,
+	.fifo_is_empty_in    (wb_data_fifo_empty   )       ,
+	.fifo_rd_en_out	     (wb_data_fifo_rd_en   )       ,
+	.fifo_data_in	     (wb_data_read         )       ,   
+	.dpb_axi_addr_in     (0                    )       ,
+    .pic_width_in        (pic_width            )       ,
+    .pic_height_in       (pic_height           )       ,
     //axi interface
     .axi_awid            (ref_pix_axi_awid     )       ,   
     .axi_awlen           (ref_pix_axi_awlen    )       ,   
@@ -614,9 +614,9 @@ cache_wb_blk
     .axi_awlock          (ref_pix_axi_awlock   )       ,   
     .axi_awcache         (ref_pix_axi_awcache  )       ,   
     .axi_awprot          (ref_pix_axi_awprot   )       ,   
-    .axi_awvalid         (ref_pix_axi_awvalid  )       ,
-    .axi_awaddr          (ref_pix_axi_awaddr   )       ,
-    .axi_awready         (ref_pix_axi_awready  )       ,
+    .axi_awvalid         (  )       ,
+    .axi_awaddr          (   )       ,
+    .axi_awready         (1'b1  )       ,
     .axi_wstrb           (ref_pix_axi_wstrb    )       ,
     .axi_wlast           (ref_pix_axi_wlast    )       ,
     .axi_wvalid          (ref_pix_axi_wvalid   )       ,
@@ -706,7 +706,7 @@ cache_wb_blk
 			ref_pix_axi_ar_addr_fifo_in
 		}), 
         .d_out({	
-			ref_pix_axi_aw_addr
+			ref_pix_axi_awaddr
 		}), 
 		// .d_empty(d_miss_elem_fifo_empty),
         .empty(ref_pix_axi_aw_fifo_empty), 
@@ -994,7 +994,7 @@ cache_wb_blk
     ) wb_data_buffer_upstr (
         .clk(clk), 
         .reset(reset), 
-        .wr_en((valid_in &  (~is_req_read))), 
+        .wr_en((valid_in &  (~is_req_read) & cache_idle_out)), 
         .rd_en(wb_data_fifo_rd_en), 
         .d_in({wb_data_in}),
         .d_out({ wb_data_read }),
@@ -1011,7 +1011,7 @@ cache_wb_blk
         .clk(clk), 
         .reset(reset), 
         .wr_en((wb_data_fifo_rd_en)), 
-        .rd_en(), 
+        .rd_en(wb_data_dwnstr_rd_en & ~wb_data_dwnstr_fifo_empty), 
         .d_in({wb_data_read}),
         .d_out({ wb_data_dwn_str_rdat }),
         .empty(wb_data_dwnstr_fifo_empty), 
@@ -1092,7 +1092,8 @@ cache_conf_stage cache_config_update_block
    .clk                        (clk                        ),
    .reset                      (reset                      ),
    
-   .valid_in                   (valid_in & cache_idle_out                  ),
+   .valid_in                   (valid_in & cache_idle_out  ),
+   .is_req_read                (is_req_read                 ),
    .tag_compare_stage_ready    (tag_compare_stage_ready    ),
    .op_conf_fifo_wr_en         (op_conf_fifo_wr_en         ),
    
@@ -1214,10 +1215,10 @@ core_tag_block
    .delta_x                               (delta_x                         ),
    .delta_y                               (delta_y                         ),
  
-   .curr_x_2d                             (curr_x_2d                          ),
-   .curr_y_2d                             (curr_y_2d                          ),
-   .delta_x_2d                            (delta_x_2d                         ),
-   .delta_y_2d                            (delta_y_2d                         ),
+   .curr_x_2d                             (curr_x_2d                       ),
+   .curr_y_2d                             (curr_y_2d                       ),
+   .delta_x_2d                            (delta_x_2d                      ),
+   .delta_y_2d                            (delta_y_2d                      ),
 
    .cur_xy_changed_luma                   (cur_xy_changed_luma             ),
    .cur_xy_changed_chma                   (cur_xy_changed_chma             ),
@@ -1254,7 +1255,7 @@ core_tag_block
    .tag_compare_stage_ready               (tag_compare_stage_ready         ),
    .tag_compare_stage_ready_d             (tag_compare_stage_ready_d       ),
    .ref_pix_axi_ar_valid_fifo_in          (ref_pix_axi_ar_valid_fifo_in    ),
-   .ref_pix_axi_aw_valid_fifo_in          (ref_pix_axi_aw_valid_fifo_in    ),
+   .ref_pix_axi_aw_valid_fifo_in          ((ref_pix_axi_aw_valid_fifo_in )  ),    // full if either of the fifos full
    .ref_pix_axi_ar_addr_fifo_in           (ref_pix_axi_ar_addr_fifo_in     ),
    .set_addr_2d                           (set_addr_2d                     ),
    .is_req_read_misq                      (is_req_read_mis_in              ),
@@ -1264,6 +1265,7 @@ core_tag_block
  
    .miss_elem_fifo_full                   (miss_elem_fifo_full             ),
    .ref_pix_axi_ar_fifo_full              (ref_pix_axi_ar_fifo_full        ),
+   .ref_pix_axi_aw_fifo_full              ((ref_pix_axi_aw_fifo_full | wb_data_fifo_full )      ),
    .hit_elem_fifo_full                    (hit_elem_fifo_full              ),
    .op_conf_fifo_program_full             (op_conf_fifo_program_full       ),
  
@@ -1534,8 +1536,9 @@ always@(posedge clk) begin
                     chma_dest_enable_reg_d <= chma_dest_enable_reg_hit;
 						
             end
-            else if((!miss_elem_fifo_empty) & (block_number_4 == block_number_3_read) & (curr_x_4 == curr_x_2d_read) & (curr_y_4 == curr_y_2d_read) & (ref_pix_axi_r_valid & ref_pix_axi_r_ready & ref_pix_axi_r_last ))begin
-                    data_read_stage_valid <= 1;
+            else if((!miss_elem_fifo_empty) & (block_number_4 == block_number_3_read) & (curr_x_4 == curr_x_2d_read) & (curr_y_4 == curr_y_2d_read) & 
+                ((ref_pix_axi_r_valid & ref_pix_axi_r_ready & ref_pix_axi_r_last ) | | (wb_data_dwnstr_rd_en & ~wb_data_dwnstr_fifo_empty)))begin
+                    data_read_stage_valid <= is_req_read_mis_out;
                     if((curr_x_4 == delta_x_2d_read) && (curr_y_4 == delta_y_2d_read)) begin
                      last_block_valid_3d <= 1;
                      curr_x_4 <= 0;
@@ -1567,7 +1570,7 @@ end
 
 always@(posedge clk) begin
     if( (ref_pix_axi_r_valid & ref_pix_axi_r_ready & ref_pix_axi_r_last ) | 
-        wb_data_dwnstr_rd_en)begin
+        ( wb_data_dwnstr_rd_en & ~wb_data_dwnstr_fifo_empty))begin
         cache_w_port_d <= cache_w_port;
     end
 end
@@ -1576,7 +1579,7 @@ end
 always@(*) begin
     cache_wr_en = 0;
     cache_addr = {set_addr_hit,set_idx_hit};
-	if((ref_pix_axi_r_valid & ref_pix_axi_r_ready & ref_pix_axi_r_last) | wb_data_dwnstr_rd_en
+	if((ref_pix_axi_r_valid & ref_pix_axi_r_ready & ref_pix_axi_r_last) |  ( wb_data_dwnstr_rd_en & ~wb_data_dwnstr_fifo_empty)
         )begin
         cache_wr_en = 1;
         cache_addr = {set_addr_read,set_idx_miss_read};	
@@ -1609,7 +1612,7 @@ always@(*) begin
 	miss_elem_fifo_rd_en = 0;
     if(!output_fifo_program_full ) begin
         if((!miss_elem_fifo_empty) & (block_number_4 == block_number_3_read) & (curr_x_4 == curr_x_2d_read) & (curr_y_4 == curr_y_2d_read) & 
-         ( (ref_pix_axi_r_valid & ref_pix_axi_r_ready & ref_pix_axi_r_last ) | wb_data_dwnstr_rd_en)
+         ( (ref_pix_axi_r_valid & ref_pix_axi_r_ready & ref_pix_axi_r_last ) | (wb_data_dwnstr_rd_en & ~wb_data_dwnstr_fifo_empty))
             )begin
             miss_elem_fifo_rd_en = 1;
         end
